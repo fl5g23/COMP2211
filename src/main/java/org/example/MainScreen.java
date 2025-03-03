@@ -9,13 +9,16 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import java.util.Map;
 
 public class MainScreen {
 
   private final Stage primaryStage;
+  private StatsCalculator statsCalculator;
 
   public MainScreen(Stage stage) {
     this.primaryStage = stage;
+    this.statsCalculator = new StatsCalculator();
   }
 
   public void show() {
@@ -37,23 +40,40 @@ public class MainScreen {
     leftPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
     leftPanel.setSpacing(10);
 
-    String[] metrics = {
-        "Number of Impressions:",
-        "Clicks on Advertisement:",
-        "Unique Clicks on Advertisement:",
-        "Bounces on Advertisement:",
-        "Conversions:",
-        "Bounce Rate:",
-        "CTR - Click Through Rate:",
-        "CPA - Cost Per Acquisition:",
-        "CPC - Cost Per Click:",
-        "CPM - Cost Per Thousand Impressions:",
-        "Total Cost:"
-    };
+    Label impressionsLabel = new Label("Number of Impressions: ");
+    Label clicksLabel = new Label("Clicks on Advertisement: ");
+    Label uniquesLabel = new Label("Unique Clicks on Advertisement: ");
+    Label conversionsLabel = new Label("Conversions: ");
+    Label bounceRateLabel = new Label("Bounce Rate: ");
+    Label ctrLabel = new Label("CTR - Click Through Rate: ");
+    Label cpaLabel = new Label("CPA - Cost Per Acquisition: ");
+    Label cpcLabel = new Label("CPC - Cost Per Click: ");
+    Label cpmLabel = new Label("CPM - Cost Per Thousand Impressions: ");
+    Label totalCostLabel = new Label("Total Cost: ");
 
-    for (String metric : metrics) {
-      leftPanel.getChildren().add(new Label(metric));
-    }
+    Map<String, Double> coreMetrics = statsCalculator.getCoreMetrics();
+    double bounceRate = statsCalculator.calculateBounceRate().getOrDefault("Single Rate", 0.0);
+    double ctr = statsCalculator.calculateCTR();
+    double cpa = statsCalculator.calculateCPA();
+    double cpc = statsCalculator.calculateCPC();
+    double cpm = statsCalculator.calculateCPM();
+    double totalCost = statsCalculator.calculateTotalCost();
+
+    impressionsLabel.setText("Number of Impressions: " + coreMetrics.getOrDefault("Impressions", 0.0));
+    clicksLabel.setText("Clicks on Advertisement: " + coreMetrics.getOrDefault("Clicks", 0.0));
+    uniquesLabel.setText("Unique Clicks on Advertisement: " + coreMetrics.getOrDefault("Uniques", 0.0));
+    conversionsLabel.setText("Conversions: " + coreMetrics.getOrDefault("Conversions", 0.0));
+    bounceRateLabel.setText("Bounce Rate: " + String.format("%.2f%%", bounceRate * 100));
+    ctrLabel.setText("CTR - Click Through Rate: " + String.format("%.2f%%", ctr));
+    cpaLabel.setText("CPA - Cost Per Acquisition: £" + String.format("%.2f", cpa));
+    cpcLabel.setText("CPC - Cost Per Click: £" + String.format("%.2f", cpc));
+    cpmLabel.setText("CPM - Cost Per Thousand Impressions: £" + String.format("%.2f", cpm));
+    totalCostLabel.setText("Total Cost: £" + String.format("%.2f", totalCost));
+
+    leftPanel.getChildren().addAll(
+        impressionsLabel, clicksLabel, uniquesLabel, conversionsLabel,
+        bounceRateLabel, ctrLabel, cpaLabel, cpcLabel, cpmLabel, totalCostLabel
+    );
 
     // Center panel with LineChart for campaign performance
     NumberAxis xAxis = new NumberAxis();
