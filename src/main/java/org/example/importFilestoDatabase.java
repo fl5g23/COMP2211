@@ -62,20 +62,24 @@ public class importFilestoDatabase {
     public void insertDataintoTables(int campaignNumber, String table, List<List<String>> data) {
         final String url = "jdbc:sqlite:mainData.db";
         final String sql;
-        // SQL Insert Statements for each table
+
+        // SQL Insert Statements for each table with checks to avoid duplicates
         if (table.equals("Impressions")) {
             sql = "INSERT INTO Impressions (Campaign, Date, ID, Gender, Age, Income, Context, Impression_Cost) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+                    + "SELECT ?, ?, ?, ?, ?, ?, ?, ? "
+                    + "WHERE NOT EXISTS (SELECT 1 FROM Impressions WHERE Campaign = ? AND ID = ? AND Date = ?);";
         } else if (table.equals("Server")) {
             sql = "INSERT INTO Server (Campaign, Entry_Date, ID, Exit_Date, Pages_Viewed, Conversion) "
-                    + "VALUES (?, ?, ?, ?, ?, ?);";
+                    + "SELECT ?, ?, ?, ?, ?, ? "
+                    + "WHERE NOT EXISTS (SELECT 1 FROM Server WHERE Campaign = ? AND ID = ? AND Entry_Date = ?);";
         } else if (table.equals("Clicks")) {
             sql = "INSERT INTO Clicks (Campaign, Date, ID, Click_Cost) "
-                    + "VALUES (?, ?, ?, ?);";
+                    + "SELECT ?, ?, ?, ? "
+                    + "WHERE NOT EXISTS (SELECT 1 FROM Clicks WHERE Campaign = ? AND ID = ? AND Date = ?);";
+        } else {
+            throw new IllegalStateException("Unexpected table name: " + table);
         }
-        else {
-            throw new IllegalStateException("Unexpected table name" + table);
-        }
+
 
         // Database connection and statement creation in try-with-resources
         try (Connection conn = DriverManager.getConnection(url);

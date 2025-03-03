@@ -8,46 +8,90 @@ import java.util.Map;
 public class StatsCalculator {
 
   /**
-   * Returns total (impression + click) cost
+   * Returns key metrics:
+   * Number of Impressions, Clicks, Uniques, Conversions
+   * Bounces are in calculateBounceRate()
+   *
    */
-  public static double calculateTotalCost() {
-    double totalImpressionCost = 0;
-    double totalClickCost = 0;
+  public Map<String, Double> getCoreMetrics() {
+    Map<String, Double> coreMetrics = new HashMap<>();
 
-    String url = "jdbc:sqlite:mainData.db";
-    String totalImpressionsSQL = "SELECT SUM(impression_cost) FROM impressions";
-    String totalClicksSQL = "SELECT SUM(click_cost) FROM clicks";
+    // Modified SQL query to exclude bounces
+    String coreMetricsSQL =
+            "SELECT COUNT(*) FROM impressions UNION ALL " +
+                    "SELECT COUNT(*) FROM clicks UNION ALL " +
+                    "SELECT COUNT(DISTINCT ID) FROM clicks UNION ALL " +
+                    "SELECT COUNT(*) FROM server WHERE conversion = 'Yes'";
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement()) {
-
-      // Get total impression cost
-      ResultSet rs1 = stmt.executeQuery(totalImpressionsSQL);
-      if (rs1.next()) {
-        totalImpressionCost = rs1.getDouble(1);
-        System.out.println("Total impression cost: " + totalImpressionCost); // Get the SUM(impression_cost)
+    try (ResultSet rs = executeSQL(coreMetricsSQL)) {
+      if (rs != null) {
+        // Process each result row and assign to the respective metric
+        if (rs.next()) {
+          coreMetrics.put("Impressions", rs.getDouble(1));
+          System.out.println("Number of impressions: " + rs.getDouble(1));
+        }
+        if (rs.next()) {
+          coreMetrics.put("Clicks", rs.getDouble(1));
+          System.out.println("Number of clicks: " + rs.getDouble(1));
+        }
+        if (rs.next()) {
+          coreMetrics.put("Uniques", rs.getDouble(1));
+          System.out.println("Number of uniques: " + rs.getDouble(1));
+        }
+        if (rs.next()) {
+          coreMetrics.put("Conversions", rs.getDouble(1));
+          System.out.println("Number of conversions: " + rs.getDouble(1));
+        }
       }
-
-      // Get total click cost
-      ResultSet rs2 = stmt.executeQuery(totalClicksSQL);
-      if (rs2.next()) {
-        totalClickCost = rs2.getDouble(1);  // Get the SUM(click_cost)
-        System.out.println("Total click cost: " + totalClickCost);
-      }
-
     } catch (SQLException e) {
       e.printStackTrace();
     }
 
-    return totalImpressionCost + totalClickCost;
+    return coreMetrics;
   }
+
+  /**
+   * Returns total (impression + click) cost
+   */
+  public double calculateTotalCost() {
+
+    double totalImpressionCost = 0;
+    double totalClickCost = 0;
+    double totalCost = 0;
+
+    // SQL queries to get total costs
+    String totalImpressionsSQL = "SELECT SUM(impression_cost) FROM impressions";
+    String totalClicksSQL = "SELECT SUM(click_cost) FROM clicks";
+
+    try {
+      // Execute SQL queries
+      ResultSet rs1 = executeSQL(totalImpressionsSQL);
+      if (rs1 != null && rs1.next()) {
+        totalImpressionCost = rs1.getDouble(1);
+        System.out.println("Total impression cost: " + totalImpressionCost);
+      }
+
+      ResultSet rs2 = executeSQL(totalClicksSQL);
+      if (rs2 != null && rs2.next()) {
+        totalClickCost = rs2.getDouble(1);
+        System.out.println("Total click cost: " + totalClickCost);
+      }
+
+      // Close ResultSets
+      if (rs1 != null) rs1.close();
+      if (rs2 != null) rs2.close();
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    totalCost = totalImpressionCost + totalClickCost;
+    return totalCost;}
 
   /**
    * Returns click-through rate -> total clicks / total impressions x 100
    */
-  public static double calculateCTR() {
+  public double calculateCTR() {
     double clickThroughRate = 0;
-    String url = "jdbc:sqlite:mainData.db";
     String clickThroughRateSQL =
             "SELECT CASE "
                     + "    WHEN (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = 1) = 0 "
@@ -56,40 +100,35 @@ public class StatsCalculator {
                     + "         (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = 1) "
                     + "END AS CTR";
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement();
-         ResultSet rs = stmt.executeQuery(clickThroughRateSQL)) {
-
-      if (rs.next()) {
-        clickThroughRate = rs.getDouble("CTR")*100;  // Use alias instead of column index
+    try {
+      ResultSet rs = executeSQL(clickThroughRateSQL);
+      if (rs != null && rs.next()) {
+        clickThroughRate = rs.getDouble("CTR") * 100; // Convert to percentage
       }
+      if (rs != null) rs.close();
     } catch (SQLException e) {
       e.printStackTrace();
     }
 
-    System.out.println("CLick through rate :" + clickThroughRate);
+    System.out.println("Click Through Rate: " + clickThroughRate + " %");
     return clickThroughRate;
   }
 
   /**
    * Returns cost per click -> click cost / number of clicks
    */
-  public static double calculateCPC() {
+  public double calculateCPC() {
     double costPerClick = 0;
 
-    String url = "jdbc:sqlite:mainData.db";
-    String totalClicksSQL = "SELECT SUM(click_cost)/COUNT(click_cost) FROM clicks";
+    String cpcSQL = "SELECT SUM(click_cost) / NULLIF(COUNT(click_cost), 0) FROM clicks WHERE Campaign = 1";
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement()) {
-
-      // Get total impression cost
-      ResultSet rs1 = stmt.executeQuery(totalClicksSQL);
-      if (rs1.next()) {
-        costPerClick = rs1.getDouble(1);
-        System.out.println("Cost per Click: " + costPerClick); // Get the SUM(impression_cost)
+    try {
+      ResultSet rs = executeSQL(cpcSQL);
+      if (rs != null && rs.next()) {
+        costPerClick = rs.getDouble(1);
+        System.out.println("Cost per Click: " + costPerClick);
       }
-
+      if (rs != null) rs.close();
     } catch (SQLException e) {
       e.printStackTrace();
     }
@@ -100,53 +139,46 @@ public class StatsCalculator {
   /**
    * Returns cost per acquisition -> total cost / number of conversions
    */
-  public static double calculateCPA() {
-    double totalCost = 0;
+  public double calculateCPA() {
+    double CPA = 0;
 
-    String url = "jdbc:sqlite:mainData.db";
-    String totalClicksSQL =
-        "SELECT \n"
-            + "    ( (SELECT SUM(Impression_Cost) FROM Impressions WHERE Campaign = 1) + \n"
-            + "      (SELECT SUM(Click_Cost) FROM Clicks WHERE Campaign = 1) ) / \n"
-            + "    (SELECT COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = 1) \n"
-            + "    AS CPA;";
+    String cpaSQL =
+            "SELECT \n"
+                    + "    ( (SELECT SUM(Impression_Cost) FROM Impressions WHERE Campaign = 1) + \n"
+                    + "      (SELECT SUM(Click_Cost) FROM Clicks WHERE Campaign = 1) ) / \n"
+                    + "    NULLIF((SELECT COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = 1), 0) \n"
+                    + "    AS CPA;";
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement()) {
-
-      // Get total impression cost
-      ResultSet rs1 = stmt.executeQuery(totalClicksSQL);
-      if (rs1.next()) {
-        totalCost = rs1.getDouble(1);
-        System.out.println("Cost per Acquisition: " + totalCost); // Get the SUM(impression_cost)
+    try {
+      ResultSet rs = executeSQL(cpaSQL);
+      if (rs != null && rs.next()) {
+        CPA = rs.getDouble(1);
+        System.out.println("Cost per Acquisition: " + CPA);
       }
-
+      if (rs != null) rs.close();
     } catch (SQLException e) {
       e.printStackTrace();
     }
 
-
-    return totalCost;
+    return CPA;
   }
 
   /**
    * Returns cost per 1000 impressions -> total cost x 1000 / number of impressions
    */
-  public static double calculateCPM() {
+  public double calculateCPM() {
     double CPM = 0;
-    String url = "jdbc:sqlite:mainData.db";
-    String cpmSQL = "SELECT ((SELECT SUM(impression_cost) FROM impressions WHERE Campaign = 1) + (SELECT SUM(click_cost) FROM clicks WHERE Campaign = 1) *1000)/ COUNT(*) FROM Impressions WHERE Campaign = 1;";
+    String cpmSQL = "SELECT ( (SELECT SUM(impression_cost) FROM Impressions WHERE Campaign = 1) + " +
+            " (SELECT SUM(click_cost) FROM Clicks WHERE Campaign = 1) ) * 1000 / " +
+            " (SELECT COUNT(*) FROM Impressions WHERE Campaign = 1);";
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement()) {
-
-      // Get total impression cost
-      ResultSet rs1 = stmt.executeQuery(cpmSQL);
-      if (rs1.next()) {
-        CPM = rs1.getDouble(1);
-        System.out.println("Cost per Thousand Impressions: " + CPM); // Get the SUM(impression_cost)
+    try {
+      ResultSet rs = executeSQL(cpmSQL);
+      if (rs != null && rs.next()) {
+        CPM = rs.getDouble(1);
+        System.out.println("Cost per Thousand Impressions: " + CPM);
       }
-
+      if (rs != null) rs.close();
     } catch (SQLException e) {
       e.printStackTrace();
     }
@@ -162,47 +194,48 @@ public class StatsCalculator {
    * Single Rate - Bounce Rate for the Single Page View Bounces
    * Page Rate - Bounce Rate for Page Left Bounces
    */
-  public static Map<String, Double> calculateBounceRate() {
+  public Map<String, Double> calculateBounceRate() {
     double singlePageBounces = 0;
     double pageleftBounces = 0;
-    double totalClicks;
+    double totalClicks = 1; // Avoid division by zero
     Map<String, Double> bouncesMap = new HashMap<>();
 
-
-    String url = "jdbc:sqlite:mainData.db";
-    String singlepageBouncesSQL = "SELECT COUNT(*) FROM Server WHERE Pages_Viewed = 1 AND Campaign = 1";
+    String singlePageBouncesSQL = "SELECT COUNT(*) FROM Server WHERE Pages_Viewed = 1 AND Campaign = 1";
     String timeSpentSQL = "SELECT COUNT(*) FROM Server WHERE Exit_Date != 'n/a' AND Conversion = 'No' AND Campaign = 1";
     String totalClicksSQL = "SELECT COUNT(click_cost) FROM Clicks";
 
-    try (Connection conn = DriverManager.getConnection(url);
-        Statement stmt = conn.createStatement()) {
-
-      // Get total impression cost
-      ResultSet rs1 = stmt.executeQuery(singlepageBouncesSQL);
-      if (rs1.next()) {
-        singlePageBounces = rs1.getInt(1);
-        System.out.println("Single Page Bounces: " + singlePageBounces); // Get the SUM(impression_cost)
+    try {
+      ResultSet rs1 = executeSQL(singlePageBouncesSQL);
+      if (rs1 != null && rs1.next()) {
+        singlePageBounces = rs1.getDouble(1);
         bouncesMap.put("Single", singlePageBounces);
+        System.out.println("Single Page Bounces: " + singlePageBounces);
       }
+      if (rs1 != null) rs1.close();
 
-      // Get total click cost
-      ResultSet rs2 = stmt.executeQuery(timeSpentSQL);
-      if (rs2.next()) {
-        pageleftBounces = rs2.getInt(1);  // Get the SUM(click_cost)
-        System.out.println("Page left bounces: " + pageleftBounces);
+      ResultSet rs2 = executeSQL(timeSpentSQL);
+      if (rs2 != null && rs2.next()) {
+        pageleftBounces = rs2.getDouble(1);
         bouncesMap.put("Page", pageleftBounces);
+        System.out.println("Page left bounces: " + pageleftBounces);
       }
+      if (rs2 != null) rs2.close();
 
-      ResultSet rs3 = stmt.executeQuery(totalClicksSQL);
-      if (rs3.next()) {
-        totalClicks = rs3.getDouble(1);  // Get the SUM(click_cost)
-        double singlePageBounceRate = singlePageBounces / totalClicks;
-        double pageleftBounceRate = pageleftBounces / totalClicks;
-        bouncesMap.put("Single Rate", singlePageBounceRate);
-        bouncesMap.put("Page Rate", pageleftBounceRate);
-        System.out.println("Single Page Bounce Rate: " + singlePageBounceRate);
-        System.out.println("Page left Bounce Rate: " + pageleftBounceRate);
+      ResultSet rs3 = executeSQL(totalClicksSQL);
+      if (rs3 != null && rs3.next()) {
+        totalClicks = rs3.getDouble(1);
       }
+      if (rs3 != null) rs3.close();
+
+      // Calculate bounce rates
+      double singlePageBounceRate = (totalClicks == 0) ? 0 : singlePageBounces / totalClicks;
+      double pageleftBounceRate = (totalClicks == 0) ? 0 : pageleftBounces / totalClicks;
+
+      bouncesMap.put("Single Rate", singlePageBounceRate);
+      bouncesMap.put("Page Rate", pageleftBounceRate);
+
+      System.out.println("Single Page Bounce Rate: " + singlePageBounceRate);
+      System.out.println("Page left Bounce Rate: " + pageleftBounceRate);
 
     } catch (SQLException e) {
       e.printStackTrace();
@@ -216,30 +249,41 @@ public class StatsCalculator {
    * Used for click cost histogram
    */
   public List<Double> getCostsList() {
-    String url = "jdbc:sqlite:mainData.db";
     String costsListSQL = "SELECT Click_Cost FROM Clicks ORDER BY Click_Cost ASC;";
     List<Double> costsList = new ArrayList<>();
 
-    try (Connection conn = DriverManager.getConnection(url);
-         Statement stmt = conn.createStatement();
-         ResultSet rs = stmt.executeQuery(costsListSQL)) {
-
-      // Iterate through the result set and add costs to the list
-      while (rs.next()) {
+    ResultSet rs = executeSQL(costsListSQL);
+    try {
+      while (rs != null && rs.next()) {
         costsList.add(rs.getDouble("Click_Cost"));
       }
-
+      rs.close();
     } catch (SQLException e) {
       e.printStackTrace();
     }
 
-    // Print or return the list (modify as needed)
     return costsList;
+  }
+
+  /**
+   * Executes SQL Statements on the database
+   * ResultSet - set of results of sql statement
+   */
+  public ResultSet executeSQL(String sqlstmt) {
+    try {
+      Connection conn = DriverManager.getConnection("jdbc:sqlite:mainData.db");
+      Statement stmt = conn.createStatement();
+      return stmt.executeQuery(sqlstmt);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 
   //testing
   public static void main (String[] args){
     StatsCalculator stats = new StatsCalculator();
+    stats.getCoreMetrics();
     stats.calculateTotalCost();
     stats.calculateCTR();
     stats.calculateCPC();
@@ -249,4 +293,3 @@ public class StatsCalculator {
     stats.getCostsList();
   }
 }
-
