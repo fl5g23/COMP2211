@@ -1,6 +1,7 @@
 
 package org.example;
 
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
@@ -10,15 +11,23 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import java.util.Map;
-
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import javafx.embed.swing.SwingNode;
 public class MainScreen {
 
   private final Stage primaryStage;
   private StatsCalculator statsCalculator;
+  private ClickCostHistogram clickCostHistogram;
+  private StackPane chartContainer;
+  private LineChart<Number, Number> lineChart;
+  private ChartPanel histogramPanel;
 
   public MainScreen(Stage stage) {
     this.primaryStage = stage;
     this.statsCalculator = new StatsCalculator();
+    this.clickCostHistogram = new ClickCostHistogram(statsCalculator.getCostsList());
+
   }
 
   public void show() {
@@ -31,8 +40,11 @@ public class MainScreen {
     title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
     Button addCampaignBtn = new Button("+ Add Campaign");
     addCampaignBtn.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
+    Button toggleChartBtn = new Button("Switch to Histogram");
+    toggleChartBtn.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
 
-    topBar.getChildren().addAll(title, addCampaignBtn);
+
+    topBar.getChildren().addAll(title, addCampaignBtn,toggleChartBtn);
     topBar.setSpacing(20);
 
     // Left panel with campaign statistics
@@ -75,29 +87,58 @@ public class MainScreen {
         bounceRateLabel, ctrLabel, cpaLabel, cpcLabel, cpmLabel, totalCostLabel
     );
 
-    // Center panel with LineChart for campaign performance
+//  CENTER PANEL WITH LINE CHART
     NumberAxis xAxis = new NumberAxis();
     NumberAxis yAxis = new NumberAxis();
-    LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+    lineChart = new LineChart<>(xAxis, yAxis);
     lineChart.setTitle("Campaign Performance Over Time");
 
     XYChart.Series<Number, Number> series = new XYChart.Series<>();
     series.setName("Clicks");
 
-    // Dummy data for chart
+//  Dummy Data (Ensure Some Data Exists)
     series.getData().add(new XYChart.Data<>(1, 10));
     series.getData().add(new XYChart.Data<>(2, 25));
     series.getData().add(new XYChart.Data<>(3, 30));
     series.getData().add(new XYChart.Data<>(4, 15));
     series.getData().add(new XYChart.Data<>(5, 40));
-
     lineChart.getData().add(series);
+
+//  HISTOGRAM PANEL (JFreeChart)
+    histogramPanel = new ChartPanel(clickCostHistogram.createHistogram());
+
+//  STACK PANE (To Toggle Between Line Chart and Histogram)
+    chartContainer = new StackPane();
+    SwingNode swingNode = new SwingNode();
+
+  // Ensure SwingNode initializes properly
+    Platform.runLater(() -> swingNode.setContent(histogramPanel));
+
+    chartContainer.getChildren().addAll(lineChart, swingNode);
+    swingNode.setVisible(false); // Hide Histogram Initially
+
+    VBox centerPanel = new VBox(chartContainer);
+    centerPanel.setPrefSize(600, 400);
+    toggleChartBtn.setOnAction(e -> {
+      if (lineChart.isVisible()) {
+        lineChart.setVisible(false);
+        Platform.runLater(() -> swingNode.setContent(histogramPanel)); // Ensure correct embedding
+        swingNode.setVisible(true);
+        toggleChartBtn.setText("Switch to Performance Chart");
+      } else {
+        swingNode.setVisible(false);
+        lineChart.setVisible(true);
+        toggleChartBtn.setText("Switch to Histogram");
+      }
+    });
+
+
 
     // Layout
     BorderPane root = new BorderPane();
     root.setTop(topBar);
     root.setLeft(leftPanel);
-    root.setCenter(lineChart);
+    root.setCenter(centerPanel);
 
     Scene scene = new Scene(root, 900, 600);
     primaryStage.setScene(scene);

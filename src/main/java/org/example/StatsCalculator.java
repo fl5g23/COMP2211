@@ -291,5 +291,6 @@ public class StatsCalculator {
     stats.calculateCPM();
     stats.calculateBounceRate();
     stats.getCostsList();
+
   }
 }
