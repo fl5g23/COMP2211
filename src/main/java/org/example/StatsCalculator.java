@@ -2,6 +2,7 @@ package org.example;
 import java.io.File;
 import java.util.*;
 import java.sql.*;
+import java.util.Date;
 
 public class StatsCalculator {
 
@@ -355,6 +356,44 @@ public class StatsCalculator {
 
     return false; // Default to false if something goes wrong
   }
+  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName) {
+    Map<String, Map<String, Integer>> metricsOverTime = new HashMap<>();
+    metricsOverTime.put("Impressions", new HashMap<>());
+    metricsOverTime.put("Clicks", new HashMap<>());
+    metricsOverTime.put("Uniques", new HashMap<>());
+    metricsOverTime.put("Conversions", new HashMap<>());
+
+    // SQL queries to group by date
+    String impressionsSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ? GROUP BY Time";
+    String clicksSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Time";
+    String uniquesSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(DISTINCT ID) FROM Clicks WHERE Campaign = ? GROUP BY Time";
+    String conversionsSQL = "SELECT strftime('%Y-%m-%d', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = ? GROUP BY Time";
+
+    List<String> parameters = List.of(campaignName);
+
+    try {
+      addDataToMap(metricsOverTime.get("Impressions"), impressionsSQL, parameters);
+      addDataToMap(metricsOverTime.get("Clicks"), clicksSQL, parameters);
+      addDataToMap(metricsOverTime.get("Uniques"), uniquesSQL, parameters);
+      addDataToMap(metricsOverTime.get("Conversions"), conversionsSQL, parameters);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return metricsOverTime;
+  }
+
+  // Helper function to fill data maps
+  private void addDataToMap(Map<String, Integer> dataMap, String sql, List<String> parameters) throws SQLException {
+    try (ResultSet rs = executeSQL(sql, parameters)) {
+      while (rs != null && rs.next()) {
+        String time = rs.getString(1); // Date (YYYY-MM-DD)
+        int count = rs.getInt(2);
+        dataMap.put(time, count);
+      }
+    }
+  }
+
 
   //testing
   public static void main (String[] args){
