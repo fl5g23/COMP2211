@@ -11,13 +11,8 @@ import java.util.List;
 
 public class ClickCostHistogram {
 
-  private List<Double> costsList;
 
-  public ClickCostHistogram(List<Double> costsList) {
-    this.costsList = costsList;
-  }
-
-  public JFreeChart createHistogram() {
+  public JFreeChart createHistogram(List<Double> costsList) {
     HistogramDataset dataset = new HistogramDataset();
 
     // Convert list to array
@@ -41,6 +36,29 @@ public class ClickCostHistogram {
         false,
         true,
         false
+    );
+  }
+
+  /**
+   * Returns blank histogram for when no campaign is loaded
+   */
+  public JFreeChart createBlankHistogram() {
+    // Create a dataset with a dummy value (e.g., 0.0) to avoid the IllegalArgumentException
+    HistogramDataset dataset = new HistogramDataset();
+
+    // Use a dummy value (e.g., 0.0) to ensure the dataset is not empty
+    dataset.addSeries("Click Costs", new double[]{0.0}, 1);
+
+    // Create and return a histogram chart with the dummy dataset
+    return ChartFactory.createHistogram(
+            "Click Cost Distribution",
+            "Click Cost (pence)",
+            "Frequency",
+            dataset,
+            PlotOrientation.VERTICAL,
+            false,
+            true,
+            false
     );
   }
 }

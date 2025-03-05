@@ -59,51 +59,54 @@ public class importFilestoDatabase {
      * table -> either "Impressions", "Server" or "Clicks" based on table needed to input data
      * data -> data returned from getCSVData
      */
-    public void insertDataintoTables(int campaignNumber, String table, List<List<String>> data) {
+    public void insertDataintoTables(String campaignName, String table, List<List<String>> data) {
         final String url = "jdbc:sqlite:mainData.db";
         final String sql;
+        final int BATCH_SIZE = 2_000_000;  // Process in chunks (tune this if needed)
+        int numberProcessed = 0;
 
-        // SQL Insert Statements for each table with checks to avoid duplicates
+        // SQL Insert Statements for each table
         if (table.equals("Impressions")) {
-            sql = "INSERT INTO Impressions (Campaign, Date, ID, Gender, Age, Income, Context, Impression_Cost) "
-                    + "SELECT ?, ?, ?, ?, ?, ?, ?, ? "
-                    + "WHERE NOT EXISTS (SELECT 1 FROM Impressions WHERE Campaign = ? AND ID = ? AND Date = ?);";
+            sql = "INSERT OR IGNORE INTO Impressions (Campaign, Date, ID, Gender, Age, Income, Context, Impression_Cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         } else if (table.equals("Server")) {
-            sql = "INSERT INTO Server (Campaign, Entry_Date, ID, Exit_Date, Pages_Viewed, Conversion) "
-                    + "SELECT ?, ?, ?, ?, ?, ? "
-                    + "WHERE NOT EXISTS (SELECT 1 FROM Server WHERE Campaign = ? AND ID = ? AND Entry_Date = ?);";
+            sql = "INSERT OR IGNORE INTO Server (Campaign, Entry_Date, ID, Exit_Date, Pages_Viewed, Conversion) VALUES (?, ?, ?, ?, ?, ?)";
         } else if (table.equals("Clicks")) {
-            sql = "INSERT INTO Clicks (Campaign, Date, ID, Click_Cost) "
-                    + "SELECT ?, ?, ?, ? "
-                    + "WHERE NOT EXISTS (SELECT 1 FROM Clicks WHERE Campaign = ? AND ID = ? AND Date = ?);";
+            sql = "INSERT OR IGNORE INTO Clicks (Campaign, Date, ID, Click_Cost) VALUES (?, ?, ?, ?)";
         } else {
             throw new IllegalStateException("Unexpected table name: " + table);
         }
 
-
-        // Database connection and statement creation in try-with-resources
+        // Database connection and transaction
         try (Connection conn = DriverManager.getConnection(url);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Iterate over the data
-            Iterator<List<String>> dataIter = data.iterator();
-        while (dataIter.hasNext()) {
-            List<String> record = dataIter.next();
-            // Set the values for the prepared statement based on the table
+            conn.setAutoCommit(false);  // Enable transaction for performance
 
-            pstmt.setInt(1, campaignNumber); // Set Campaign (same for all tables)
+            for (List<String> record : data) {
+                pstmt.setString(1, campaignName); // Set Campaign
 
-            if (table.equals("Impressions")) {
-              importImpressions(record, pstmt);
-            } else if (table.equals("Server")) {
-              importServer(record, pstmt);
-            } else if (table.equals("Clicks")) {
-              importClicks(record, pstmt);
+                if (table.equals("Impressions")) {
+                    importImpressions(record, pstmt);
+                } else if (table.equals("Server")) {
+                    importServer(record, pstmt);
+                } else if (table.equals("Clicks")) {
+                    importClicks(record, pstmt);
+                }
+
+                pstmt.addBatch();
+                numberProcessed++;
+
+                // Execute batch periodically
+                if (numberProcessed % BATCH_SIZE == 0) {
+                    pstmt.executeBatch();
+                    conn.commit(); // Commit changes
+                }
             }
 
-            // Execute the insert
-            pstmt.executeUpdate();
-        }
+            // Ensure final batch is executed
+            pstmt.executeBatch();
+            conn.commit();
+
             System.out.println("Data inserted successfully into table: " + table);
 
         } catch (SQLException e) {
@@ -138,7 +141,7 @@ public class importFilestoDatabase {
 
     String sqlcreateImpressions =
             "CREATE TABLE IF NOT EXISTS Impressions (\n"
-                    + "    Campaign INT, \n"
+                    + "    Campaign TEXT, \n"
                     + "    Date DATETIME,\n"
                     + "    ID BIGINT, \n"
                     + "    Gender TEXT, \n"
@@ -149,7 +152,7 @@ public class importFilestoDatabase {
                     + ");";
 
     String sqlcreateServer = "CREATE TABLE IF NOT EXISTS Server (\n" +
-            "    Campaign INT, \n" +
+            "    Campaign TEXT, \n" +
             "    Entry_Date DATETIME,\n" +
             "    ID BIGINT,\n" +
             "    Exit_Date DATETIME,\n" +
@@ -158,7 +161,7 @@ public class importFilestoDatabase {
             ");";
 
     String sqlcreateClicks = "CREATE TABLE IF NOT EXISTS Clicks (\n" +
-            "    Campaign INT, \n" +
+            "    Campaign TEXT, \n" +
             "    Date DATETIME,\n" +
             "    ID BIGINT,\n" +
             "    Click_Cost REAL CHECK (Click_Cost >= 0)\n" +
@@ -167,8 +170,8 @@ public class importFilestoDatabase {
     public static void main (String[] args){
         importFilestoDatabase object = new importFilestoDatabase();
         object.createDatabases();
-        var hi = object.getCSVData("src/main/resources/testCSV/impression_log.csv"); //change to any of the other ones
-        object.insertDataintoTables(1,"Impressions",hi);
+        var hi = object.getCSVData("src/main/resources/testCSV/server_log2month.csv"); //change to any of the other ones
+        object.insertDataintoTables("LOL","Server",hi);
 
   }
 }
