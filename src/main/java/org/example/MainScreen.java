@@ -41,6 +41,7 @@ public class MainScreen {
   private Campaign currentCampaign = new Campaign("", new File(""),new File(""),new File(""));
 
   // Core metric labels
+  Label keyMetricsTitle = new Label("Key Metrics:");
   Label impressionsLabel = new Label("Impressions: ");
   Label clicksLabel = new Label("Clicks on Ad: ");
   Label uniquesLabel = new Label("Uniques Clicks on Ads: ");
@@ -63,6 +64,7 @@ public class MainScreen {
 
   public MainScreen(Stage stage) {
     this.primaryStage = stage;
+    keyMetricsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bolder; -fx-underline: true;");
   }
 
   public void show() {
@@ -85,7 +87,6 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
-
     topBar.getChildren().addAll(title, toggleChartBtn, exportSelectBox, exportButton);
     topBar.setSpacing(20);
 
@@ -96,10 +97,12 @@ public class MainScreen {
 
     VBox metricsPanel = new VBox();
     metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    HBox metricsLabels = new HBox();
 
     metricsPanel
         .getChildren()
         .addAll(
+            keyMetricsTitle,
             impressionsLabel,
             clicksLabel,
             uniquesLabel,
