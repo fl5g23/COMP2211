@@ -331,7 +331,6 @@ public class StatsCalculator {
         stmt.setString(i + 1, parameters.get(i)); // PreparedStatement uses 1-based index
       }
 
-      // Execute and return the result set
       return stmt.executeQuery();
     } catch (SQLException e) {
       e.getMessage();
@@ -342,9 +341,9 @@ public class StatsCalculator {
   /**
    * Returns true/false depending on if campaign exists
    */
-  public boolean isCampaignExists(Campaign campaign) {
+  public boolean isCampaignExists(String campaignName) {
     String query = "SELECT COUNT(*) FROM Impressions WHERE Campaign = ?";
-    List<String> parameters = List.of(campaign.getName());
+    List<String> parameters = List.of(campaignName);
 
     try (ResultSet rs = executeSQL(query, parameters)) {
       if (rs != null && rs.next()) {
@@ -410,30 +409,6 @@ public class StatsCalculator {
   }
 
 
-  public boolean doesCampaignExist(String campaignName) {
-    String query = "SELECT COUNT(*) FROM campaigns WHERE name = ?";  // SQL query to check for existing campaign name
-
-    // Prepare the parameters for the query
-    List<String> parameters = List.of(campaignName);
-
-    // Execute the SQL query and get the result set
-    ResultSet resultSet = executeSQL(query, parameters);
-
-    if (resultSet != null) {
-      try {
-        if (resultSet.next()) {
-          int count = resultSet.getInt(1);  // Get the count from the query result
-          return count > 0;  // If count is greater than 0, campaign exists
-        }
-      } catch (SQLException e) {
-        e.printStackTrace();
-        // Handle the exception as necessary
-      }
-    }
-    return false;  // Return false if no campaign is found or there's an error
-  }
-
-
 
   public Map<String, Integer> getClicksOverTime(String campaignName) {
     Map<String, Integer> clicksOverTime = new TreeMap<>(); // Ensures sorted order by date
@@ -466,6 +441,6 @@ public class StatsCalculator {
     //    stats.calculateCPM("1");
     //    stats.calculateBounceRate("1");
     //    stats.getCostsList("1");
-    System.out.println(stats.isCampaignExists(new Campaign("!",new File(""),new File(""),new File(""))));
+//    System.out.println(stats.isCampaignExists(new Campaign("!",new File(""),new File(""),new File(""))));
   }
 }

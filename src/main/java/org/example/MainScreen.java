@@ -273,9 +273,11 @@ public class MainScreen {
 
     Button applyButton = new Button("Apply filters");
     applyButton.setPrefSize(133, 26);
-    applyButton.setOnAction(e-> generateGraph(currentCampaign.getName())
-    );
-
+    applyButton.setOnAction(
+        e -> {
+          generateGraph(currentCampaign.getName());
+          updateBounceRate(currentCampaign.getName());
+        });
 
     filtersPanel.getChildren().addAll(filterLabel, topfilterBox, bottomfilterBox, timeGranularityLabel, timeGranularityToggleBox, bounceDefinitionLabel, bounceDefinitionBox, datePickerBox, applyButton);
     filtersPanel.setAlignment(Pos.CENTER);
@@ -420,8 +422,9 @@ public class MainScreen {
     saveButton.setOnAction(
         e -> {
           String campaignName = campaignNameField.getText().trim();
-          if (checkCampaignNameValid(campaignName)) {
-            if (impression_log_flag && click_log_flag && server_log_flag) {
+          Boolean campaign_name_flag = checkCampaignNameValid(campaignName);
+//          Boolean campaign_name_flag = true;
+            if (impression_log_flag && click_log_flag && server_log_flag && campaign_name_flag) {
               if (!campaignName.isEmpty()) {
                 Campaign newCampaign =
                     new Campaign(
@@ -433,7 +436,6 @@ public class MainScreen {
                 updateCampaignMenu(titleLabel, rootContainer); // Replace label with MenuButton
                 itemSelected(newCampaign);
                 dialogStage.close();
-              }
             } else {
               showAlert(null, "Files");
             }
@@ -490,7 +492,7 @@ public class MainScreen {
   }
 
   public boolean checkCampaignNameValid(String campaignName){
-    if(statsCalculator.doesCampaignExist(campaignName)){
+    if(statsCalculator.isCampaignExists(campaignName)){
       showAlert(null,"campaignname");
       return false;
     }else{
@@ -566,7 +568,7 @@ public class MainScreen {
    */
   private void itemSelected(Campaign campaign) {
     campaignMenuButton.setText(campaign.getName());
-    if (!(statsCalculator.isCampaignExists(campaign))) {
+    if (!(statsCalculator.isCampaignExists(campaign.getName()))) {
       System.out.println("Campaign does not exist");
       statsCalculator.setup(
           campaign,
@@ -581,6 +583,16 @@ public class MainScreen {
     }
   }
 
+  private void updateBounceRate(String campaignName){
+    double bounceRate;
+    if(pageleftBounceToggle.isSelected()){
+      bounceRate = statsCalculator.calculateBounceRate(campaignName).getOrDefault("Page Rate", 0.0);
+    }else {
+      bounceRate = statsCalculator.calculateBounceRate(campaignName).getOrDefault("Single Rate", 0.0);
+    }
+    bounceRateValue.setText(String.format("%,.2f%%", bounceRate * 100));
+  }
+
   /**
    * Updates the labels when new campaign is selected
    */
@@ -592,7 +604,7 @@ public class MainScreen {
   isDataDownloaded = true;
 
     double bounceRate =
-      statsCalculator.calculateBounceRate(campaignName).getOrDefault("Single Rate", 0.0);
+      statsCalculator.calculateBounceRate(campaignName).getOrDefault("Page Rate", 0.0);
   double ctr = statsCalculator.calculateCTR(campaignName);
   double cpa = statsCalculator.calculateCPA(campaignName);
   double cpc = statsCalculator.calculateCPC(campaignName);
@@ -647,7 +659,7 @@ public class MainScreen {
     cpaValue.setText(String.format("%,.2f", cpa));
     cpcValue.setText(String.format("%,.2f", cpc));
     cpmValue.setText(String.format("%,.2f", cpm));
-    totalCostValue.setText(String.format("%,.2f", totalCost));
+    totalCostValue.setText(String.format("£" + "%,.2f", totalCost));
   generateGraph(campaignName);
 }
   private void generateGraph(String campaignName) {
