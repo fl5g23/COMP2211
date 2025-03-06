@@ -556,17 +556,19 @@ public class MainScreen {
         });
 
     impressionsLabel.setText(
-        "Impressions: " + coreMetrics.getOrDefault("Impressions", 0.0));
-    clicksLabel.setText("Clicks on Ad: " + coreMetrics.getOrDefault("Clicks", 0.0));
+        "Impressions: " + String.format("%,.0f", coreMetrics.getOrDefault("Impressions", 0.0)));
+    clicksLabel.setText(
+        "Clicks on Ad: " + String.format("%,.0f", coreMetrics.getOrDefault("Clicks", 0.0)));
     uniquesLabel.setText(
-        "Unique Clicks on Ad: " + coreMetrics.getOrDefault("Uniques", 0.0));
-    conversionsLabel.setText("Conversions: " + coreMetrics.getOrDefault("Conversions", 0.0));
-    bounceRateLabel.setText("Bounce Rate: " + String.format("%.2f%%", bounceRate * 100));
-    ctrLabel.setText("CTA: " + String.format("%.2f%%", ctr));
-    cpaLabel.setText("CPA: £" + String.format("%.2f", cpa));
-    cpcLabel.setText("CPC: £" + String.format("%.2f", cpc));
-    cpmLabel.setText("CPM: £" + String.format("%.2f", cpm));
-    totalCostLabel.setText("Total Cost: £" + String.format("%.2f", totalCost));
+        "Unique Clicks on Ad: " + String.format("%,.0f", coreMetrics.getOrDefault("Uniques", 0.0)));
+    conversionsLabel.setText(
+        "Conversions: " + String.format("%,.0f", coreMetrics.getOrDefault("Conversions", 0.0)));
+    bounceRateLabel.setText("Bounce Rate: " + String.format("%,.2f%%", bounceRate * 100));
+    ctrLabel.setText("CTR: " + String.format("%,.2f%%", ctr));
+    cpaLabel.setText("CPA: £" + String.format("%,.2f", cpa));
+    cpcLabel.setText("CPC: £" + String.format("%,.2f", cpc));
+    cpmLabel.setText("CPM: £" + String.format("%,.2f", cpm));
+    totalCostLabel.setText("Total Cost: £" + String.format("%,.2f", totalCost));
     generateGraph(campaignName);
   }
 
