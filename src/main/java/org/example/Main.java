@@ -7,8 +7,8 @@ public class Main extends Application {
 
   @Override
   public void start(Stage primaryStage) {
-    MainScreen mainScreen = new MainScreen(primaryStage);
-    mainScreen.show(); // Load the main screen UI
+    LoginPage loginPage = new LoginPage(primaryStage);
+    loginPage.show(primaryStage);
   }
 
   public static void main(String[] args) {

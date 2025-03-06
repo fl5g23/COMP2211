@@ -53,6 +53,19 @@ public class importFilestoDatabase {
         }
     }
 
+    public List<String> getCSVStructure(String pathtofile) {
+        try (Stream<String> lines = Files.lines(Paths.get(pathtofile))) {
+            // Read only the first line, split by commas, and return as a list
+            return lines
+                    .findFirst()  // Get the first line
+                    .map(line -> Arrays.asList(line.split(",")))  // Split by commas and convert to List
+                    .orElse(null);  // Return null if the file is empty
+        } catch (IOException e) {
+            // Handle any IO exceptions
+            throw new RuntimeException("Error reading CSV file: " + pathtofile, e);
+        }
+    }
+
     /**
      * Inserts data into each table (database tables must exist)
      * campaignNumber -> default 1, will be more when we compare graphs
@@ -62,7 +75,7 @@ public class importFilestoDatabase {
     public void insertDataintoTables(String campaignName, String table, List<List<String>> data) {
         final String url = "jdbc:sqlite:mainData.db";
         final String sql;
-        final int BATCH_SIZE = 2_000_000;  // Process in chunks (tune this if needed)
+        final int BATCH_SIZE = 1_000;  // Process in chunks (tune this if needed)
         int numberProcessed = 0;
 
         // SQL Insert Statements for each table

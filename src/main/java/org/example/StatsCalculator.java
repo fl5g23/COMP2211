@@ -106,7 +106,7 @@ public class StatsCalculator {
     }
 
     totalCost = totalImpressionCost + totalClickCost;
-    return totalCost;
+    return totalCost/100;
   }
 
   /**
@@ -141,7 +141,7 @@ public class StatsCalculator {
     }
 
     System.out.println("Click Through Rate: " + clickThroughRate + " %");
-    return clickThroughRate;
+    return clickThroughRate/100;
   }
 
   /**
@@ -167,7 +167,7 @@ public class StatsCalculator {
       e.printStackTrace();
     }
 
-    return costPerClick;
+    return costPerClick/100;
   }
 
   /**
@@ -198,7 +198,7 @@ public class StatsCalculator {
       e.printStackTrace();
     }
 
-    return CPA;
+    return CPA/100;
   }
 
   /**
@@ -226,7 +226,7 @@ public class StatsCalculator {
       e.printStackTrace();
     }
 
-    return CPM;
+    return CPM/100;
   }
 
   /**
@@ -334,7 +334,7 @@ public class StatsCalculator {
       // Execute and return the result set
       return stmt.executeQuery();
     } catch (SQLException e) {
-      e.printStackTrace();
+      e.getMessage();
     }
     return null;
   }
@@ -356,18 +356,28 @@ public class StatsCalculator {
 
     return false; // Default to false if something goes wrong
   }
-  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName) {
+  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType) {
     Map<String, Map<String, Integer>> metricsOverTime = new HashMap<>();
     metricsOverTime.put("Impressions", new HashMap<>());
     metricsOverTime.put("Clicks", new HashMap<>());
     metricsOverTime.put("Uniques", new HashMap<>());
     metricsOverTime.put("Conversions", new HashMap<>());
+    metricsOverTime.put("Bounces", new HashMap<>()); // Adding Bounces
 
     // SQL queries to group by date
     String impressionsSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ? GROUP BY Time";
     String clicksSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Time";
     String uniquesSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(DISTINCT ID) FROM Clicks WHERE Campaign = ? GROUP BY Time";
     String conversionsSQL = "SELECT strftime('%Y-%m-%d', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = ? GROUP BY Time";
+
+    String bounceSQL;
+    if (bounceType.equals("SinglePage")) {
+      bounceSQL = "SELECT strftime('%Y-%m-%d', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Pages_Viewed = 1 AND Campaign = ? GROUP BY Time";
+    } else if (bounceType.equals("PageLeft")) {
+      bounceSQL = "SELECT strftime('%Y-%m-%d', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Exit_Date != 'n/a' AND Conversion = 'No' AND Campaign = ? GROUP BY Time";
+    } else {
+      throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
+    }
 
     List<String> parameters = List.of(campaignName);
 
@@ -376,6 +386,7 @@ public class StatsCalculator {
       addDataToMap(metricsOverTime.get("Clicks"), clicksSQL, parameters);
       addDataToMap(metricsOverTime.get("Uniques"), uniquesSQL, parameters);
       addDataToMap(metricsOverTime.get("Conversions"), conversionsSQL, parameters);
+      addDataToMap(metricsOverTime.get("Bounces"), bounceSQL, parameters); // Fetch bounce data
     } catch (SQLException e) {
       e.printStackTrace();
     }
@@ -393,6 +404,36 @@ public class StatsCalculator {
       }
     }
   }
+
+  public List<String> getCSVStructure(String pathtofile){
+    return importer.getCSVStructure(pathtofile);
+  }
+
+
+  public boolean doesCampaignExist(String campaignName) {
+    String query = "SELECT COUNT(*) FROM campaigns WHERE name = ?";  // SQL query to check for existing campaign name
+
+    // Prepare the parameters for the query
+    List<String> parameters = List.of(campaignName);
+
+    // Execute the SQL query and get the result set
+    ResultSet resultSet = executeSQL(query, parameters);
+
+    if (resultSet != null) {
+      try {
+        if (resultSet.next()) {
+          int count = resultSet.getInt(1);  // Get the count from the query result
+          return count > 0;  // If count is greater than 0, campaign exists
+        }
+      } catch (SQLException e) {
+        e.printStackTrace();
+        // Handle the exception as necessary
+      }
+    }
+    return false;  // Return false if no campaign is found or there's an error
+  }
+
+
 
 
   //testing
