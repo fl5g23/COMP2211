@@ -44,7 +44,7 @@ public class MainScreen {
   Label keyMetricsTitle = new Label("Key Metrics:");
   Label impressionsLabel = new Label("Impressions: ");
   Label clicksLabel = new Label("Clicks on Ad: ");
-  Label uniquesLabel = new Label("Uniques Clicks on Ads: ");
+  Label uniquesLabel = new Label("Unique Clicks on Ad: ");
   Label conversionsLabel = new Label("Conversions: ");
   Label bounceRateLabel = new Label("Bounce Rate: ");
   Label ctrLabel = new Label("CTR: ");
@@ -52,6 +52,17 @@ public class MainScreen {
   Label cpcLabel = new Label("CPC: ");
   Label cpmLabel = new Label("CPM: ");
   Label totalCostLabel = new Label("Total Cost: ");
+  Label keyMetricsValue = new Label("");
+  Label impressionsValue = new Label("");
+  Label clicksValue = new Label("");
+  Label uniquesValue = new Label("");
+  Label conversionsValue = new Label("");
+  Label bounceRateValue = new Label("");
+  Label ctrValue = new Label("");
+  Label cpaValue = new Label("");
+  Label cpcValue = new Label("");
+  Label cpmValue = new Label("");
+  Label totalCostValue = new Label("");
   Button toggleChartBtn = new Button("Switch to Histogram");
 
   ToggleButton pageleftBounceToggle = new ToggleButton("Page Left");
@@ -95,11 +106,17 @@ public class MainScreen {
     leftPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
     leftPanel.setPrefSize(250.0, 334.0);
 
-    VBox metricsPanel = new VBox();
+    HBox metricsPanel = new HBox();
     metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
-    HBox metricsLabels = new HBox();
+    VBox metricsLabels = new VBox();
+    VBox metricsValues = new VBox();
+    VBox.setVgrow(metricsLabels, Priority.ALWAYS);
+    metricsLabels.setAlignment(Pos.CENTER_LEFT);
+    metricsValues.setAlignment(Pos.CENTER_RIGHT);
+    metricsLabels.setFillWidth(true);
+    metricsPanel.getChildren().addAll(metricsLabels,metricsValues);
 
-    metricsPanel
+    metricsLabels
         .getChildren()
         .addAll(
             keyMetricsTitle,
@@ -113,6 +130,21 @@ public class MainScreen {
             cpcLabel,
             cpmLabel,
             totalCostLabel);
+
+    metricsValues
+        .getChildren()
+        .addAll(
+            keyMetricsValue,
+            impressionsValue,
+            clicksValue,
+            uniquesValue,
+            conversionsValue,
+            bounceRateValue,
+            ctrValue,
+            cpaValue,
+            cpcValue,
+            cpmValue,
+            totalCostValue);
 
     Tooltip impressionsTooltip = new Tooltip("Total number of times the ad was displayed.");
     Tooltip.install(impressionsLabel, impressionsTooltip);
@@ -236,10 +268,6 @@ public class MainScreen {
 
     filtersPanel.getChildren().addAll(filterLabel, topfilterBox, bottomfilterBox, timeGranularityLabel, timeGranularityToggleBox, bounceDefinitionLabel, bounceDefinitionBox, datePickerBox, applyButton);
     filtersPanel.setAlignment(Pos.CENTER);
-
-
-
-
 
     leftPanel.getChildren().addAll(metricsPanel, filtersPanel);
 
@@ -558,20 +586,20 @@ public class MainScreen {
           }
         });
 
-    impressionsLabel.setText(
-        "Impressions: " + String.format("%,.0f", coreMetrics.getOrDefault("Impressions", 0.0)));
-    clicksLabel.setText(
-        "Clicks on Ad: " + String.format("%,.0f", coreMetrics.getOrDefault("Clicks", 0.0)));
-    uniquesLabel.setText(
-        "Unique Clicks on Ad: " + String.format("%,.0f", coreMetrics.getOrDefault("Uniques", 0.0)));
-    conversionsLabel.setText(
-        "Conversions: " + String.format("%,.0f", coreMetrics.getOrDefault("Conversions", 0.0)));
-    bounceRateLabel.setText("Bounce Rate: " + String.format("%,.2f%%", bounceRate * 100));
-    ctrLabel.setText("CTR: " + String.format("%,.2f%%", ctr));
-    cpaLabel.setText("CPA: £" + String.format("%,.2f", cpa));
-    cpcLabel.setText("CPC: £" + String.format("%,.2f", cpc));
-    cpmLabel.setText("CPM: £" + String.format("%,.2f", cpm));
-    totalCostLabel.setText("Total Cost: £" + String.format("%,.2f", totalCost));
+    impressionsValue.setText(
+        String.format("%,.0f", coreMetrics.getOrDefault("Impressions", 0.0)));
+    clicksValue.setText(
+        String.format("%,.0f", coreMetrics.getOrDefault("Clicks", 0.0)));
+    uniquesValue.setText(
+        String.format("%,.0f", coreMetrics.getOrDefault("Uniques", 0.0)));
+    conversionsValue.setText(
+        String.format("%,.0f", coreMetrics.getOrDefault("Conversions", 0.0)));
+    bounceRateValue.setText(String.format("%,.2f%%", bounceRate * 100));
+    ctrValue.setText(String.format("%,.2f%%", ctr));
+    cpaValue.setText(String.format("%,.2f", cpa));
+    cpcValue.setText(String.format("%,.2f", cpc));
+    cpmValue.setText(String.format("%,.2f", cpm));
+    totalCostValue.setText(String.format("%,.2f", totalCost));
     generateGraph(campaignName);
   }
 
