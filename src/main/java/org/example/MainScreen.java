@@ -26,7 +26,7 @@ public class MainScreen {
 
   private final Stage primaryStage;
   private StatsCalculator statsCalculator = new StatsCalculator();
-  private ClickCostHistogram clickCostHistogram = new ClickCostHistogram();
+  private ClickCostHistogram clickCostHistogram=new ClickCostHistogram();
   private StackPane chartContainer;
   private ChartPanel histogramPanel;
 
@@ -72,6 +72,11 @@ public class MainScreen {
   Boolean click_log_flag = false;
   Boolean server_log_flag = false;
 
+  private boolean isClickByCost = true; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
+  private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
+  private boolean isDataDownloaded = false; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
+
+
 
   public MainScreen(Stage stage) {
     this.primaryStage = stage;
@@ -89,8 +94,13 @@ public class MainScreen {
     Label title = new Label("Add Campaign");
     title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #328ccd;");
     title.setOnMouseClicked(e -> openAddCampaignDialog(title, topBar)); // Pass Label and TopBar
+    Button logoutButton = new Button("Logout");
+    logoutButton.setStyle("-fx-background-color: #d9534f; -fx-text-fill: white; -fx-font-weight: bold;");
+    logoutButton.setOnAction(e -> logout());
 
     toggleChartBtn.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
+    toggleHistogramTypeBtn.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
+    toggleHistogramTypeBtn.setVisible(false);
 
     ComboBox exportSelectBox = new ComboBox();
     exportSelectBox.promptTextProperty().set("Export Format");
@@ -98,7 +108,7 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
-    topBar.getChildren().addAll(title, toggleChartBtn, exportSelectBox, exportButton);
+    topBar.getChildren().addAll(title,logoutButton, toggleChartBtn, exportSelectBox, exportButton,toggleHistogramTypeBtn);
     topBar.setSpacing(20);
 
     // Left panel with campaign statistics
@@ -263,7 +273,8 @@ public class MainScreen {
 
     Button applyButton = new Button("Apply filters");
     applyButton.setPrefSize(133, 26);
-    applyButton.setOnAction(e-> generateGraph(currentCampaign.getName()));
+    applyButton.setOnAction(e-> generateGraph(currentCampaign.getName())
+    );
 
 
     filtersPanel.getChildren().addAll(filterLabel, topfilterBox, bottomfilterBox, timeGranularityLabel, timeGranularityToggleBox, bounceDefinitionLabel, bounceDefinitionBox, datePickerBox, applyButton);
@@ -283,10 +294,12 @@ public class MainScreen {
     lineChart.setTitle("Campaign Performance Over Time");
 
     // Histogram panel (JFreeChart)
-    histogramPanel = new ChartPanel(clickCostHistogram.createBlankHistogram());
 
     // StackPane (To Toggle Between Line Chart and Histogram)
     chartContainer = new StackPane();
+    histogramPanel = new ChartPanel(clickCostHistogram.createBlankHistogram());
+
+    // StackPane (To Toggle Between Line Chart and Histogram)
 
     // Ensure SwingNode initializes properly
     Platform.runLater(() -> swingNode.setContent(histogramPanel));
@@ -300,17 +313,34 @@ public class MainScreen {
     toggleChartBtn.setOnAction(
         e -> {
           if (lineChart.isVisible()) {
+            toggleHistogramTypeBtn.setVisible(true);
+
             lineChart.setVisible(false);
             Platform.runLater(
                 () -> swingNode.setContent(histogramPanel)); // Ensure correct embedding
             swingNode.setVisible(true);
             toggleChartBtn.setText("Switch to Performance Chart");
+            isClickByCost = true;
+            toggleHistogramTypeBtn.setText("Clicks by time");
+
           } else {
             swingNode.setVisible(false);
             lineChart.setVisible(true);
             toggleChartBtn.setText("Switch to Histogram");
+            toggleHistogramTypeBtn.setVisible(false);
+            isClickByCost = true;
+            toggleHistogramTypeBtn.setText("Clicks by time");
           }
         });
+//
+
+    toggleHistogramTypeBtn.setOnAction(e -> {
+      isClickByCost = !isClickByCost; // Toggle state first
+      toggleHistogramTypeBtn.setText(isClickByCost ? "Clicks by Time" : "Clicks by Cost");
+
+      updateHistogram();  // Ensure histogram updates correctly
+    });
+
 
     // Layout
     BorderPane root = new BorderPane();
@@ -554,37 +584,55 @@ public class MainScreen {
   /**
    * Updates the labels when new campaign is selected
    */
+  // Update statistics
   private void updateStats(String campaignName) {
-    // Update statistics
 
-    List<Double> costslist = statsCalculator.getCostsList(campaignName);
+  List<Double> costslist = statsCalculator.getCostsList(campaignName);
+  isClickByCost = true;
+  isDataDownloaded = true;
+
     double bounceRate =
-        statsCalculator.calculateBounceRate(campaignName).getOrDefault("Single Rate", 0.0);
-    double ctr = statsCalculator.calculateCTR(campaignName);
-    double cpa = statsCalculator.calculateCPA(campaignName);
-    double cpc = statsCalculator.calculateCPC(campaignName);
-    double cpm = statsCalculator.calculateCPM(campaignName);
-    double totalCost = statsCalculator.calculateTotalCost(campaignName);
+      statsCalculator.calculateBounceRate(campaignName).getOrDefault("Single Rate", 0.0);
+  double ctr = statsCalculator.calculateCTR(campaignName);
+  double cpa = statsCalculator.calculateCPA(campaignName);
+  double cpc = statsCalculator.calculateCPC(campaignName);
+  double cpm = statsCalculator.calculateCPM(campaignName);
+  double totalCost = statsCalculator.calculateTotalCost(campaignName);
+  toggleHistogramTypeBtn.setText( "Clicks by Time");
 
-    ChartPanel newHistogramPanel = new ChartPanel(clickCostHistogram.createHistogram(costslist));
-    int indexofhistogram = chartContainer.getChildren().indexOf(swingNode);
+  ChartPanel newHistogramPanel = new ChartPanel(new ClickCostHistogram(costslist).createHistogram());
+  int indexofhistogram = chartContainer.getChildren().indexOf(swingNode);
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
     chartContainer.getChildren().set(indexofhistogram, swingNode);
-    Map<String, Double> coreMetrics = statsCalculator.getCoreMetrics(campaignName);
-    toggleChartBtn.setOnAction(
-        e -> {
-          if (lineChart.isVisible()) {
-            lineChart.setVisible(false);
-            Platform.runLater(
-                () -> swingNode.setContent(newHistogramPanel)); // Ensure correct embedding
-            swingNode.setVisible(true);
-            toggleChartBtn.setText("Switch to Performance Chart");
-          } else {
-            swingNode.setVisible(false);
-            lineChart.setVisible(true);
-            toggleChartBtn.setText("Switch to Histogram");
-          }
-        });
+  Map<String, Double> coreMetrics = statsCalculator.getCoreMetrics(campaignName);
+    // Toggle Histogram & Performance Chart
+    toggleChartBtn.setOnAction(e -> {
+      if (lineChart.isVisible()) {
+        updateHistogram();
+        lineChart.setVisible(false);
+        Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
+        swingNode.setVisible(true);
+        toggleChartBtn.setText("Switch to Performance Chart");
+        toggleHistogramTypeBtn.setVisible(true);
+        toggleHistogramTypeBtn.setText( "Clicks by Time");
+        isClickByCost=true;
+      } else {
+        swingNode.setVisible(false);
+        lineChart.setVisible(true);
+        toggleChartBtn.setText("Switch to Histogram");
+        toggleHistogramTypeBtn.setVisible(false);
+        toggleHistogramTypeBtn.setText( "Clicks by Time");
+        isClickByCost=true;
+      }
+    });
+
+    // Toggle Between Click Cost & Click Time Histogram
+    toggleHistogramTypeBtn.setOnAction(e -> {
+      isClickByCost = !isClickByCost;
+      toggleHistogramTypeBtn.setText(isClickByCost ? "Clicks by Time" : "Clicks by Cost");
+      updateHistogram();
+    });
+
 
     impressionsValue.setText(
         String.format("%,.0f", coreMetrics.getOrDefault("Impressions", 0.0)));
@@ -600,9 +648,8 @@ public class MainScreen {
     cpcValue.setText(String.format("%,.2f", cpc));
     cpmValue.setText(String.format("%,.2f", cpm));
     totalCostValue.setText(String.format("%,.2f", totalCost));
-    generateGraph(campaignName);
-  }
-
+  generateGraph(campaignName);
+}
   private void generateGraph(String campaignName) {
     //real graph implementation
     String bouncetype;
@@ -690,6 +737,44 @@ public class MainScreen {
     }
 
     Platform.runLater(() -> lineChart.getData().add(series));
+  }
+
+  private void updateHistogram() {
+    ChartPanel newHistogramPanel;
+    if(!isDataDownloaded) {
+      newHistogramPanel = new ChartPanel(clickCostHistogram.createBlankHistogram());
+      }
+    else if (isClickByCost) {
+        List<Double> clickCosts = statsCalculator.getCostsList(currentCampaign.getName());
+        newHistogramPanel = new ChartPanel(new ClickCostHistogram(clickCosts).createHistogram());
+      }
+    else{
+      Map<String, Integer> clicksByDate = statsCalculator.getClicksOverTime(currentCampaign.getName());
+      newHistogramPanel = new ChartPanel(new ClickCostHistogram(clicksByDate).createHistogram());
+
+    }
+
+    // ✅ Ensure the histogram updates properly
+    Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
+  }
+  private void logout() {
+    System.out.println("🔹 Logging out...");
+
+    // ✅ Clear all stored data
+    campaigns.clear();
+    currentCampaign = new Campaign("", new File(""), new File(""), new File(""));
+    impressionLogFile = null;
+    clicksLogFile = null;
+    serverLogFile = null;
+    impression_log_flag = false;
+    click_log_flag = false;
+    server_log_flag = false;
+    swingNode.setContent(null); // Clear histogram
+    lineChart.getData().clear(); // Clear performance graph
+
+    // ✅ Switch back to the Login Page
+    LoginPage loginPage = new LoginPage(primaryStage);
+    loginPage.show(primaryStage);
   }
 
 

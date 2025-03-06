@@ -435,6 +435,25 @@ public class StatsCalculator {
 
 
 
+  public Map<String, Integer> getClicksOverTime(String campaignName) {
+    Map<String, Integer> clicksOverTime = new TreeMap<>(); // Ensures sorted order by date
+
+    // SQL query to group clicks by day
+    String clicksByTimeSQL = "SELECT strftime('%Y-%m-%d', Date) AS Day, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Day ORDER BY Day;";
+
+    try (ResultSet rs = executeSQL(clicksByTimeSQL, List.of(campaignName))) {
+      while (rs != null && rs.next()) {
+        String day = rs.getString(1);  // Get date as YYYY-MM-DD
+        int clickCount = rs.getInt(2);  // Count of clicks on that day
+        clicksOverTime.put(day, clickCount);
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return clicksOverTime;
+  }
+
 
   //testing
   public static void main (String[] args){
