@@ -766,13 +766,13 @@ public class MainScreen {
 
     }
 
-    // ✅ Ensure the histogram updates properly
+
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
   }
   private void logout() {
     System.out.println("🔹 Logging out...");
 
-    // ✅ Clear all stored data
+
     campaigns.clear();
     currentCampaign = new Campaign("", new File(""), new File(""), new File(""));
     impressionLogFile = null;
@@ -784,7 +784,7 @@ public class MainScreen {
     swingNode.setContent(null); // Clear histogram
     lineChart.getData().clear(); // Clear performance graph
 
-    // ✅ Switch back to the Login Page
+
     LoginPage loginPage = new LoginPage(primaryStage);
     loginPage.show(primaryStage);
   }
