@@ -1,18 +1,15 @@
-
-package org.example;
-
+package org.example.Views;
 
 import javafx.scene.Scene;
-
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-
+import org.example.Controllers.UIController;
 
 public class LoginPage {
     private final Stage primaryStage;
+    private UIController controller;  // Reference to the controller
 
     public LoginPage(Stage stage) {
         this.primaryStage = stage;
@@ -41,7 +38,7 @@ public class LoginPage {
         usernameField.setLayoutY(100);
         usernameField.setPrefSize(161, 26);
 
-        TextField passwordField = new TextField();
+        TextField passwordField = new PasswordField(); // Changed to PasswordField for security
         passwordField.setLayoutX(14);
         passwordField.setLayoutY(178);
         passwordField.setPrefSize(161, 26);
@@ -50,13 +47,17 @@ public class LoginPage {
         registerButton.setLayoutX(287);
         registerButton.setLayoutY(100);
         registerButton.setPrefSize(74, 26);
-        registerButton.setOnAction(e -> loadMainScreen(primaryStage));
+        registerButton.setOnAction(e -> {
+            // In a real app, you would validate and register the user
+            // For this demo, we'll just proceed to the main screen
+            loginUser(usernameField.getText(), passwordField.getText());
+        });
 
         Button loginButton = new Button("Login");
         loginButton.setLayoutX(287);
         loginButton.setLayoutY(178);
         loginButton.setPrefSize(74, 26);
-        loginButton.setOnAction(e -> loadMainScreen(primaryStage));
+        loginButton.setOnAction(e -> loginUser(usernameField.getText(), passwordField.getText()));
 
         // Add elements to the layout
         root.getChildren().addAll(titleLabel, usernameLabel, passwordLabel, usernameField, passwordField, registerButton, loginButton);
@@ -67,10 +68,14 @@ public class LoginPage {
         primaryStage.show();
     }
 
-    private void loadMainScreen(Stage stage) {
-        MainScreen mainScreen = new MainScreen(stage);
-        mainScreen.show();
+    private void loginUser(String username, String password) {
+        // Create the controller upon successful login
+        this.controller = new UIController(primaryStage);
+        controller.showMainScreen();
     }
 
-
+    // Method to set the controller (needed for testing or dependency injection)
+    public void setController(UIController controller) {
+        this.controller = controller;
+    }
 }

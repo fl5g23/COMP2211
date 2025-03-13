@@ -1,4 +1,4 @@
-package org.example;
+package org.example.Models;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +13,6 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ClickCostHistogram {
 

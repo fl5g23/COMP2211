@@ -1,8 +1,8 @@
-package org.example;
+package org.example.Models;
+
 import java.io.File;
 import java.util.*;
 import java.sql.*;
-import java.util.Date;
 
 public class StatsCalculator {
 
