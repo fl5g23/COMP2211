@@ -5,7 +5,10 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 import org.example.Controllers.UIController;
+
+import java.util.ArrayList;
 
 public class LoginPage {
     private final Stage primaryStage;
@@ -13,6 +16,8 @@ public class LoginPage {
 
     public LoginPage(Stage stage) {
         this.primaryStage = stage;
+        this.controller = new UIController(primaryStage);
+        controller.setup();
     }
 
     public void show(Stage primaryStage) {
@@ -47,17 +52,26 @@ public class LoginPage {
         registerButton.setLayoutX(287);
         registerButton.setLayoutY(100);
         registerButton.setPrefSize(74, 26);
-        registerButton.setOnAction(e -> {
-            // In a real app, you would validate and register the user
-            // For this demo, we'll just proceed to the main screen
-            loginUser(usernameField.getText(), passwordField.getText());
-        });
+        registerButton.setOnAction(
+                e -> {
+                    if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
+                        controller.showAlert(null, "userpwdempty");
+                    } else {
+                        addUser(usernameField.getText(), passwordField.getText());
+                    }
+                });
 
         Button loginButton = new Button("Login");
         loginButton.setLayoutX(287);
         loginButton.setLayoutY(178);
         loginButton.setPrefSize(74, 26);
-        loginButton.setOnAction(e -> loginUser(usernameField.getText(), passwordField.getText()));
+        loginButton.setOnAction(e -> {
+            if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
+                controller.showAlert(null, "userpwdempty");
+            } else {
+                loginUser(usernameField.getText(), passwordField.getText());
+            }
+        });
 
         // Add elements to the layout
         root.getChildren().addAll(titleLabel, usernameLabel, passwordLabel, usernameField, passwordField, registerButton, loginButton);
@@ -68,11 +82,37 @@ public class LoginPage {
         primaryStage.show();
     }
 
-    private void loginUser(String username, String password) {
-        // Create the controller upon successful login
-        this.controller = new UIController(primaryStage);
-        controller.showMainScreen();
+    private void addUser(String username, String password){
+        ArrayList<Object> authorisedResult = controller.userExists(username, password);
+        Boolean usernameValid = (Boolean) authorisedResult.get(0);
+        if (usernameValid){
+            controller.showAlert(null, "usernamealreadyexists");
+        }else{
+            controller.addUser(username, password);
+        }
     }
+
+    private void loginUser(String username, String password) {
+        ArrayList<Object> authorisedResult = controller.userExists(username, password);
+        Boolean usernameValid = (Boolean) authorisedResult.get(0);
+        Boolean passwordValid = (Boolean) authorisedResult.get(1);
+        Boolean authorisedStatus = (Boolean) authorisedResult.get(2);
+        String userRole = (String) authorisedResult.get(3);
+
+        if(usernameValid && passwordValid && !(authorisedStatus)){
+            controller.showAlert(null,"notauthorised");
+        }
+        else if((!usernameValid)){
+            controller.showAlert(null, "usernotexist");
+        }
+        else if(!(passwordValid)){
+            controller.showAlert(null, "passwordwrong");
+        }
+        else if (usernameValid && passwordValid && authorisedStatus){
+            controller.showMainScreen(userRole);
+        }
+    }
+
 
     // Method to set the controller (needed for testing or dependency injection)
     public void setController(UIController controller) {

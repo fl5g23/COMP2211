@@ -8,8 +8,12 @@ public class StatsCalculator {
 
   importFilestoDatabase importer = new importFilestoDatabase();
 
-  public void setup(Campaign campaign, File impression_log, File click_log, File server_log){
-    importer.createDatabases();
+  public void setup(){
+    importer.createDataTables();
+  }
+
+
+  public void addData(Campaign campaign, File impression_log, File click_log, File server_log){
     var impressionData = importer.getCSVData(impression_log.getAbsolutePath());
     var clickData = importer.getCSVData(click_log.getAbsolutePath());
     var serverData = importer.getCSVData(server_log.getAbsolutePath());
@@ -427,6 +431,21 @@ public class StatsCalculator {
     }
 
     return clicksOverTime;
+  }
+
+  public void closeAppActions() {
+    String url = "jdbc:sqlite:mainData.db";
+
+    try (var conn = DriverManager.getConnection(url);
+         var stmt = conn.createStatement()) {
+
+      stmt.execute("DROP TABLE IF EXISTS Impressions");
+      stmt.execute("DROP TABLE IF EXISTS Clicks");
+      stmt.execute("DROP TABLE IF EXISTS Server");
+
+    } catch (SQLException e) {
+      System.err.println(e.getMessage());
+    }
   }
 
 

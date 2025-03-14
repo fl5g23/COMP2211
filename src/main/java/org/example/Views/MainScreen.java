@@ -75,7 +75,7 @@ public class MainScreen {
   /**
    * Initialize and show the main screen
    */
-  public void show() {
+  public void show(String role) {
     primaryStage.setTitle("Ad Campaign Dashboard");
 
     // Top bar with title and Add Campaign button
@@ -101,8 +101,18 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
-    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, toggleHistogramTypeBtn);
+    Button authoriseUsersButton = new Button("Authorise Users");
+    authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
+
+    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, toggleHistogramTypeBtn, authoriseUsersButton);
     topBar.setSpacing(20);
+
+
+    if (role.equals("Admin")){
+      authoriseUsersButton.setVisible(true);
+    }else{
+      authoriseUsersButton.setVisible(false);
+    }
 
     // Left panel with campaign statistics
     VBox leftPanel = new VBox();
@@ -186,6 +196,8 @@ public class MainScreen {
     root.setTop(topBar);
     root.setLeft(leftPanel);
     root.setCenter(centerPanel);
+
+    setupCloseHandler(primaryStage);
 
     Scene scene = new Scene(root, 900, 600);
     primaryStage.setScene(scene);
@@ -387,6 +399,26 @@ public class MainScreen {
       alert.setTitle("Error");
       alert.setHeaderText("Campaign name wrong");
       alert.setContentText("Campaign name already exists");
+    }else if (type.equals("userpwdempty")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username or password invalid");
+      alert.setContentText("The username and password field cannot be empty");
+    } else if (type.equals("usernotexist")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username or password invalid");
+      alert.setContentText("The username and password combination does not exist");
+    }else if (type.equals("notauthorised")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Not authorised");
+      alert.setContentText("Your account must be authorised by the admin");
+    } else if (type.equals("usernamealreadyexists")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username already exists");
+      alert.setContentText("This username is already registered");
+    }else if(type.equals("passwordwrong")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Password invalid");
+      alert.setContentText("Password is incorrect");
     } else {
       alert.setTitle("Error");
       alert.setHeaderText("Wrong format");
@@ -560,4 +592,12 @@ public class MainScreen {
     ChartPanel newHistogramPanel = new ChartPanel(new ClickCostHistogram(clicksByDate).createHistogram());
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
   }
+
+  // Add this to your main application class where you set up the primary stage
+  private void setupCloseHandler(Stage primaryStage) {
+    primaryStage.setOnCloseRequest(event -> {
+      controller.closeAppActions();
+    });
+  }
+
 }

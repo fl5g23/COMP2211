@@ -3,8 +3,10 @@ package org.example.Controllers;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 import org.example.Models.Campaign;
 import org.example.Views.AddCampaignView;
+import org.example.Views.AuthoriseUsersView;
 import org.example.Views.LoginPage;
 import org.example.Views.MainScreen;
 
@@ -40,8 +42,8 @@ public class UIController {
     /**
      * Shows the main screen of the application.
      */
-    public void showMainScreen() {
-        mainScreen.show();
+    public void showMainScreen(String role) {
+        mainScreen.show(role);
     }
 
     /**
@@ -53,6 +55,11 @@ public class UIController {
     public void openAddCampaignDialog(Label titleLabel, HBox rootContainer) {
         AddCampaignView campaignView = new AddCampaignView(primaryStage, this);
         campaignView.openAddCampaignDialog(titleLabel, rootContainer);
+    }
+
+    public void openAuthoriseUsersPage(){
+        AuthoriseUsersView authoriseUsersView = new AuthoriseUsersView(primaryStage, this);
+        authoriseUsersView.show();
     }
 
     /**
@@ -115,6 +122,7 @@ public class UIController {
     public void selectCampaign(Campaign campaign) {
         if (!currentCampaign.equals(campaign)) {
             currentCampaign = campaign;
+            updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
             generateGraph(campaign.getName(), "PageLeft");
         }
@@ -251,6 +259,38 @@ public class UIController {
         currentCampaign = new Campaign("", new File(""), new File(""), new File(""));
         // You would create a new LoginPage or handle the transition
         LoginPage loginPage = new LoginPage(primaryStage);
+        closeAppActions();
         loginPage.show(primaryStage);
+
     }
+
+    public void addUser(String username, String password){
+        dataController.addUser(username,password);
+    }
+
+    public void setup(){
+        dataController.setupDatabase();
+    }
+
+    public ArrayList<Object> userExists(String username, String password){
+        return dataController.userExists(username,password);
+    }
+
+    public ArrayList<String> getUnauthorisedUsers(){
+        return dataController.getUnauthorisedUsers();
+    }
+
+    public void authoriseUser(String username, String role){
+        dataController.authoriseUser(username, role);
+    }
+
+    public void deleteUser(String username){
+        dataController.deleteUser(username);
+    }
+
+    public void closeAppActions(){
+        dataController.closeAppActions();
+    }
+
+
 }
