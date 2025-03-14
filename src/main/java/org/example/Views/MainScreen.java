@@ -6,6 +6,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -26,7 +27,7 @@ public class MainScreen {
   private final Stage primaryStage;
   private MenuButton campaignMenuButton; // Replaces the title label after a campaign is added
   private SwingNode swingNode = new SwingNode();
-  private LineChart<Number, Number> lineChart;
+  private LineChart<String, Number> lineChart;
   private StackPane chartContainer;
   private ChartPanel histogramPanel;
   private ClickCostHistogram clickCostHistogram = new ClickCostHistogram();
@@ -157,8 +158,8 @@ public class MainScreen {
     leftPanel.getChildren().addAll(metricsPanel, filtersPanel);
 
     // Initialize chart components
-    NumberAxis xAxis = new NumberAxis();
-    xAxis.setLabel("Time (Days)");
+    CategoryAxis xAxis = new CategoryAxis();
+    xAxis.setLabel("Date");
     NumberAxis yAxis = new NumberAxis();
     yAxis.setLabel("Count (Impressions, Clicks, Uniques, Conversions)");
 
@@ -514,36 +515,27 @@ public class MainScreen {
    * Helper to add series to the line chart
    */
   private void addSeriesToChart(Map<String, Integer> dataMap, String name, double scaleFactor) {
-    XYChart.Series<Number, Number> series = new XYChart.Series<>();
+    XYChart.Series<String, Number> series = new XYChart.Series<>();
     series.setName(name);
 
     List<String> sortedDates = new ArrayList<>(dataMap.keySet());
     sortedDates.sort(Comparator.naturalOrder());
 
-    Map<String, Integer> dateIndexMap = new HashMap<>();
-    for (int i = 0; i < sortedDates.size(); i++) {
-      dateIndexMap.put(sortedDates.get(i), i);
-    }
-
-    for (Map.Entry<String, Integer> entry : dataMap.entrySet()) {
-      int xValue = dateIndexMap.get(entry.getKey());
-      double yValue = entry.getValue() * scaleFactor;
-
-      XYChart.Data<Number, Number> dataPoint = new XYChart.Data<>(xValue, yValue);
+    for (String date : sortedDates) {
+      double yValue = dataMap.get(date) * scaleFactor;
+      XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(date, yValue);
 
       // Add tooltip showing raw and scaled values
-      Tooltip tooltip = new Tooltip(name + "\nDate: " + entry.getKey() +
-              "\nRaw: " + entry.getValue() + "\nScaled: " + yValue);
-
-      // Use Platform.runLater to avoid JavaFX threading issues
-      final XYChart.Data<Number, Number> finalDataPoint = dataPoint;
-      Platform.runLater(() -> Tooltip.install(finalDataPoint.getNode(), tooltip));
+      Tooltip tooltip = new Tooltip(name + "\nDate: " + date +
+          "\nRaw: " + dataMap.get(date) + "\nScaled: " + yValue);
+      Platform.runLater(() -> Tooltip.install(dataPoint.getNode(), tooltip));
 
       series.getData().add(dataPoint);
     }
 
     Platform.runLater(() -> lineChart.getData().add(series));
   }
+
 
   /**
    * Update the histogram for click costs
