@@ -13,6 +13,8 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.io.File;
 
@@ -34,6 +36,7 @@ public class MainScreen {
   private boolean isClickByCost = true; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
   private boolean isDataDownloaded = false; // Track if data is available for histograms
   private UIController controller; // Reference to the controller
+  Boolean firstGraphGeneration = true; //solves bug with chart generation
 
   // Core metric labels
   Label keyMetricsTitle = new Label("Key Metrics:");
@@ -160,11 +163,13 @@ public class MainScreen {
     // Initialize chart components
     CategoryAxis xAxis = new CategoryAxis();
     xAxis.setLabel("Date");
+
     NumberAxis yAxis = new NumberAxis();
     yAxis.setLabel("Count (Impressions, Clicks, Uniques, Conversions)");
 
     lineChart = new LineChart<>(xAxis, yAxis);
     lineChart.setTitle("Campaign Performance Over Time");
+    lineChart.setAnimated(false);
 
     // Histogram panel setup
     chartContainer = new StackPane();
@@ -469,6 +474,10 @@ public class MainScreen {
    */
   public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime) {
     // Clear existing chart data
+
+    if (!firstGraphGeneration){
+      lineChart.setAnimated(true);
+    }
     lineChart.getData().clear();
 
     // Find max values for each metric
@@ -509,6 +518,8 @@ public class MainScreen {
     addSeriesToChart(metricsOverTime.get("Uniques"), "Uniques (x" + scaleFactors.get("Uniques") + ")", scaleFactors.get("Uniques"));
     addSeriesToChart(metricsOverTime.get("Conversions"), "Conversions (x" + scaleFactors.get("Conversions") + ")", scaleFactors.get("Conversions"));
     addSeriesToChart(metricsOverTime.get("Bounces"), "Bounces (x" + scaleFactors.get("Bounces") + ")", scaleFactors.get("Bounces"));
+
+    firstGraphGeneration = false;
   }
 
   /**
@@ -532,6 +543,7 @@ public class MainScreen {
 
       series.getData().add(dataPoint);
     }
+
 
     Platform.runLater(() -> lineChart.getData().add(series));
   }
