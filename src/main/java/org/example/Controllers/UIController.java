@@ -3,7 +3,6 @@ package org.example.Controllers;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 import org.example.Models.Campaign;
 import org.example.Views.AddCampaignView;
 import org.example.Views.AuthoriseUsersView;
@@ -117,16 +116,18 @@ public class UIController {
     /**
      * Handles campaign selection from the menu.
      *
-     * @param campaign the selected campaign
+     * @param campaign       the selected campaign
      */
-    public void selectCampaign(Campaign campaign) {
+    public void selectCampaign(Campaign campaign ) {
         if (!currentCampaign.equals(campaign)) {
             currentCampaign = campaign;
             updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
-            generateGraph(campaign.getName(), "PageLeft");
+
+            generateGraph(campaign.getName(), "PageLeft","Impressions");
         }
     }
+
 
     /**
      * Updates the campaign menu box to show the selected box
@@ -170,23 +171,24 @@ public class UIController {
         mainScreen.updateBounceRateDisplay(bounceRate);
     }
 
-    /**
-     * Generates the performance graph for the selected campaign.
-     *
-     * @param campaignName the name of the campaign
-     * @param bounceType the type of bounce to include in the graph
-     */
-    public void generateGraph(String campaignName, String bounceType) {
-        Map<String, Map<String, Integer>> metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType);
-        mainScreen.updatePerformanceGraph(metricsOverTime);
-    }
-
-    /**
-     * Updates the histogram display.
-     *
-     * @param campaignName the name of the campaign
-     * @param isClickByCost flag indicating the type of histogram
-     */
+  /**
+   * Generates the performance graph for the selected campaign.
+   *
+   * @param campaignName the name of the campaign
+   * @param bounceType the type of bounce to include in the graph
+   */
+  // Modified generateGraph method to take a selectedMetric
+  public void generateGraph(String campaignName, String bounceType, String selectedMetric) {
+    Map<String, Map<String, Integer>> metricsOverTime =
+        dataController.getMetricsOverTime(campaignName, bounceType);
+    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
+}
+        /**
+         * Updates the histogram display.
+         *
+         * @param campaignName the name of the campaign
+         * @param isClickByCost flag indicating the type of histogram
+         */
     public void updateHistogram(String campaignName, boolean isClickByCost) {
         if (isClickByCost) {
             List<Double> clickCosts = dataController.getCostsList(campaignName);

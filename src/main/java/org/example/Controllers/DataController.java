@@ -28,10 +28,10 @@ public class DataController {
     public void setupCampaignData(Campaign campaign) {
         if (!isCampaignExists(campaign.getName())) {
             statsCalculator.addData(
-                    campaign,
-                    campaign.getImpressionLogFile(),
-                    campaign.getClicksLogFile(),
-                    campaign.getServerLogFile()
+                campaign,
+                campaign.getImpressionLogFile(),
+                campaign.getClicksLogFile(),
+                campaign.getServerLogFile()
             );
         }
     }
