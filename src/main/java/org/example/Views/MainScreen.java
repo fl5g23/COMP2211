@@ -116,11 +116,11 @@ public class MainScreen {
 
     // Left panel with campaign statistics
     VBox leftPanel = new VBox();
-    leftPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    leftPanel.setStyle("-fx-background-color: #e0e0e0;");
     leftPanel.setPrefSize(250.0, 334.0);
 
     HBox metricsPanel = new HBox();
-    metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 10px");
     VBox metricsLabels = new VBox();
     VBox metricsValues = new VBox();
     VBox.setVgrow(metricsLabels, Priority.ALWAYS);
@@ -243,9 +243,9 @@ public class MainScreen {
    * Create the filters panel
    */
   private VBox createFiltersPanel() {
-    VBox filtersPanelContent = new VBox(15);
-    filtersPanelContent.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
-    filtersPanelContent.setPrefWidth(220);
+    VBox filtersPanel = new VBox();
+    filtersPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    filtersPanel.setPrefSize(132, 500);
 
     // Filters title
     Label filterLabel = new Label("Filters");
@@ -258,67 +258,83 @@ public class MainScreen {
     metricDropdown.setValue("Impressions");
     metricDropdown.setPrefWidth(190);
 
-    VBox metricBox = new VBox(5, metricLabel, metricDropdown);
+    VBox metricBox = new VBox(metricLabel, metricDropdown);
     metricBox.setAlignment(Pos.CENTER);
 
+    HBox topfilterBox = new HBox();
     // Gender and Age ComboBoxes
     ComboBox<String> genderComboBox = new ComboBox<>();
     genderComboBox.setPromptText("Gender");
-    genderComboBox.setPrefWidth(90);
+    genderComboBox.setPrefSize(100, 26);
 
     ComboBox<String> ageComboBox = new ComboBox<>();
-    ageComboBox.setPromptText("Age");
-    ageComboBox.setPrefWidth(90);
+    ageComboBox.promptTextProperty().set("Age");
+    ageComboBox.setPrefSize(100, 26);
+    topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
+    topfilterBox.setPadding(new Insets(5, 5, 0, 0));
+    topfilterBox.setAlignment(Pos.CENTER);
 
-    HBox genderAgeBox = new HBox(10, genderComboBox, ageComboBox);
-    genderAgeBox.setAlignment(Pos.CENTER);
+    // Income and Context
+    HBox bottomfilterBox = new HBox();
 
     // Income and Context ComboBoxes
     ComboBox<String> incomeComboBox = new ComboBox<>();
     incomeComboBox.setPromptText("Income");
-    incomeComboBox.setPrefWidth(90);
+    incomeComboBox.setPrefSize(100, 26);
 
     ComboBox<String> contextComboBox = new ComboBox<>();
-    contextComboBox.setPromptText("Context");
-    contextComboBox.setPrefWidth(90);
-
-    HBox incomeContextBox = new HBox(10, incomeComboBox, contextComboBox);
-    incomeContextBox.setAlignment(Pos.CENTER);
+    contextComboBox.promptTextProperty().set("Context");
+    contextComboBox.setPrefSize(100, 26);
+    bottomfilterBox.getChildren().addAll(incomeComboBox, contextComboBox);
+    bottomfilterBox.setPadding(new Insets(5, 5, 0, 0));
+    bottomfilterBox.setAlignment(Pos.CENTER);
 
     // Time Granularity
     Label timeGranularityLabel = new Label("Time Granularity");
+    timeGranularityLabel.setPadding(new Insets(5, 5, 0, 0));
+    HBox timeGranularityToggleBox = new HBox();
+
     ToggleGroup timeGranularityGroup = new ToggleGroup();
+
     ToggleButton hourToggle = new ToggleButton("Hour");
     ToggleButton dayToggle = new ToggleButton("Day");
     ToggleButton weekToggle = new ToggleButton("Week");
+
     hourToggle.setToggleGroup(timeGranularityGroup);
     dayToggle.setToggleGroup(timeGranularityGroup);
     weekToggle.setToggleGroup(timeGranularityGroup);
-    HBox timeGranularityBox = new HBox(10, hourToggle, dayToggle, weekToggle);
-    timeGranularityBox.setAlignment(Pos.CENTER);
+
+    timeGranularityToggleBox.getChildren().addAll(hourToggle, dayToggle, weekToggle);
+    timeGranularityToggleBox.setPadding(new Insets(5, 5, 0, 0));
+    timeGranularityToggleBox.setAlignment(Pos.CENTER);
 
     // Bounce Definition
     Label bounceDefinitionLabel = new Label("Bounce Definition");
     ToggleGroup bounceDefinitionGroup = new ToggleGroup();
     pageleftBounceToggle.setToggleGroup(bounceDefinitionGroup);
     singlePageBounceToggle.setToggleGroup(bounceDefinitionGroup);
-    HBox bounceDefinitionBox = new HBox(10, pageleftBounceToggle, singlePageBounceToggle);
+
+    bounceDefinitionLabel.setPadding(new Insets(5, 5, 0, 0));
+
+    HBox bounceDefinitionBox = new HBox();
+    bounceDefinitionBox.getChildren().addAll(pageleftBounceToggle, singlePageBounceToggle);
+    bounceDefinitionBox.setPadding(new Insets(5, 5, 0, 0));
     bounceDefinitionBox.setAlignment(Pos.CENTER);
 
     // Date pickers
     Label datePickerLabel = new Label("Date Range");
-    DatePicker startDatePicker = new DatePicker();
-    DatePicker endDatePicker = new DatePicker();
-    HBox datePickerBox = new HBox(5, startDatePicker, new Label("to"), endDatePicker);
-    datePickerBox.setAlignment(Pos.CENTER);
-
-    // Spacer to push Apply button clearly to bottom
-    Region spacer = new Region();
-    VBox.setVgrow(spacer, Priority.ALWAYS);
+    HBox datePickerBox = new HBox();
+    DatePicker datePicker1 = new DatePicker();
+    datePicker1.setPrefSize(200.0, 35.0);
+    Label toLabel = new Label("to");
+    DatePicker datePicker2 = new DatePicker();
+    datePicker2.setPrefSize(200.0, 35.0);
+    datePickerBox.getChildren().addAll(datePicker1, toLabel, datePicker2);
+    datePickerBox.setPadding(new Insets(5, 0, 15, 0));
 
     // keeping the apply Filters button at bottom
-    Button applyButton = new Button("Apply Filters");
-    applyButton.setPrefWidth(190);
+    Button applyButton = new Button("Apply filters");
+    applyButton.setPrefSize(133, 26);
     applyButton.setOnAction(e -> {
       Campaign selectedCampaign = getSelectedCampaign();
       if (selectedCampaign != null) {
@@ -330,32 +346,12 @@ public class MainScreen {
     });
 
     // Adding  content to panel
-    filtersPanelContent.getChildren().addAll(
-        filterLabel,
-        metricBox,
-        genderAgeBox,
-        incomeContextBox,
-        timeGranularityLabel,
-        new HBox(10, hourToggle, dayToggle, weekToggle),
-        bounceDefinitionLabel,
-        bounceDefinitionBox,
-        datePickerLabel,
-        datePickerBox,
-        spacer,
-        applyButton
-    );
-
-    // adding an scroller tp the  panel
-    ScrollPane scrollPane = new ScrollPane(filtersPanelContent);
-    scrollPane.setFitToWidth(true);
-    scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-    scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-    scrollPane.setStyle("-fx-background-color: transparent;");
-
-    VBox filtersPanel = new VBox(scrollPane);
-    filtersPanel.setStyle("-fx-background-color: #e0e0e0;");
-    filtersPanel.setPrefWidth(220);
-    filtersPanel.setPrefHeight(500);
+    filtersPanel.getChildren().addAll( metricBox,
+            filterLabel, topfilterBox, bottomfilterBox,
+            timeGranularityLabel, timeGranularityToggleBox,
+            bounceDefinitionLabel, bounceDefinitionBox, datePickerLabel,
+            datePickerBox, applyButton);
+    filtersPanel.setAlignment(Pos.CENTER);
 
     return filtersPanel;
   }
