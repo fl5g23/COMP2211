@@ -5,6 +5,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.example.Models.Campaign;
 import org.example.Views.AddCampaignView;
+import org.example.Views.AuthoriseUsersView;
 import org.example.Views.LoginPage;
 import org.example.Views.MainScreen;
 
@@ -40,8 +41,8 @@ public class UIController {
     /**
      * Shows the main screen of the application.
      */
-    public void showMainScreen() {
-        mainScreen.show();
+    public void showMainScreen(String role) {
+        mainScreen.show(role);
     }
 
     /**
@@ -53,6 +54,11 @@ public class UIController {
     public void openAddCampaignDialog(Label titleLabel, HBox rootContainer) {
         AddCampaignView campaignView = new AddCampaignView(primaryStage, this);
         campaignView.openAddCampaignDialog(titleLabel, rootContainer);
+    }
+
+    public void openAuthoriseUsersPage(){
+        AuthoriseUsersView authoriseUsersView = new AuthoriseUsersView(primaryStage, this);
+        authoriseUsersView.show();
     }
 
     /**
@@ -110,15 +116,18 @@ public class UIController {
     /**
      * Handles campaign selection from the menu.
      *
-     * @param campaign the selected campaign
+     * @param campaign       the selected campaign
      */
-    public void selectCampaign(Campaign campaign) {
+    public void selectCampaign(Campaign campaign ) {
         if (!currentCampaign.equals(campaign)) {
             currentCampaign = campaign;
+            updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
-            generateGraph(campaign.getName(), "PageLeft");
+
+            generateGraph(campaign.getName(), "PageLeft","Impressions");
         }
     }
+
 
     /**
      * Updates the campaign menu box to show the selected box
@@ -162,23 +171,24 @@ public class UIController {
         mainScreen.updateBounceRateDisplay(bounceRate);
     }
 
-    /**
-     * Generates the performance graph for the selected campaign.
-     *
-     * @param campaignName the name of the campaign
-     * @param bounceType the type of bounce to include in the graph
-     */
-    public void generateGraph(String campaignName, String bounceType) {
-        Map<String, Map<String, Integer>> metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType);
-        mainScreen.updatePerformanceGraph(metricsOverTime);
-    }
-
-    /**
-     * Updates the histogram display.
-     *
-     * @param campaignName the name of the campaign
-     * @param isClickByCost flag indicating the type of histogram
-     */
+  /**
+   * Generates the performance graph for the selected campaign.
+   *
+   * @param campaignName the name of the campaign
+   * @param bounceType the type of bounce to include in the graph
+   */
+  // Modified generateGraph method to take a selectedMetric
+  public void generateGraph(String campaignName, String bounceType, String selectedMetric) {
+    Map<String, Map<String, Integer>> metricsOverTime =
+        dataController.getMetricsOverTime(campaignName, bounceType);
+    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
+}
+        /**
+         * Updates the histogram display.
+         *
+         * @param campaignName the name of the campaign
+         * @param isClickByCost flag indicating the type of histogram
+         */
     public void updateHistogram(String campaignName, boolean isClickByCost) {
         if (isClickByCost) {
             List<Double> clickCosts = dataController.getCostsList(campaignName);
@@ -251,6 +261,38 @@ public class UIController {
         currentCampaign = new Campaign("", new File(""), new File(""), new File(""));
         // You would create a new LoginPage or handle the transition
         LoginPage loginPage = new LoginPage(primaryStage);
+        closeAppActions();
         loginPage.show(primaryStage);
+
     }
+
+    public void addUser(String username, String password){
+        dataController.addUser(username,password);
+    }
+
+    public void setup(){
+        dataController.setupDatabase();
+    }
+
+    public ArrayList<Object> userExists(String username, String password){
+        return dataController.userExists(username,password);
+    }
+
+    public ArrayList<String> getUnauthorisedUsers(){
+        return dataController.getUnauthorisedUsers();
+    }
+
+    public void authoriseUser(String username, String role){
+        dataController.authoriseUser(username, role);
+    }
+
+    public void deleteUser(String username){
+        dataController.deleteUser(username);
+    }
+
+    public void closeAppActions(){
+        dataController.closeAppActions();
+    }
+
+
 }

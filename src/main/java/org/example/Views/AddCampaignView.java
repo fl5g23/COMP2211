@@ -102,11 +102,13 @@ public class AddCampaignView {
         saveButton.setLayoutX(211);
         saveButton.setLayoutY(187);
         saveButton.setPrefSize(55, 26);
-        saveButton.setOnAction(e -> {
-            String campaignName = campaignNameField.getText().trim();
-
+        saveButton.setOnAction(
+        e -> {
+          String campaignName = campaignNameField.getText().trim();
+          if (controller.isValidCampaignName(campaignName)) {
             // Delegate the entire save process to the controller
-            boolean saveSuccessful = controller.saveCampaign(
+            boolean saveSuccessful =
+                controller.saveCampaign(
                     campaignName,
                     impressionLogFile,
                     clicksLogFile,
@@ -115,15 +117,17 @@ public class AddCampaignView {
                     click_log_flag,
                     server_log_flag,
                     titleLabel,
-                    rootContainer
-            );
+                    rootContainer);
 
             if (saveSuccessful) {
-                dialogStage.close();
+              dialogStage.close();
             }
+          }else{
+              controller.showAlert(null, "campaignname");
+          }
         });
 
-        Button cancelButton = new Button("Cancel");
+    Button cancelButton = new Button("Cancel");
         cancelButton.setLayoutX(140);
         cancelButton.setLayoutY(188);
         cancelButton.setOnAction(e -> dialogStage.close());

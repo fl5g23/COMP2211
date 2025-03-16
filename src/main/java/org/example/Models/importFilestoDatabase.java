@@ -16,7 +16,7 @@ public class importFilestoDatabase {
      *
      *
      */
-    public void createDatabases() {
+    public void createDataTables() {
         String url = "jdbc:sqlite:mainData.db";
 
         try (var conn = DriverManager.getConnection(url)) {
@@ -180,7 +180,7 @@ public class importFilestoDatabase {
 
     public static void main (String[] args){
         importFilestoDatabase object = new importFilestoDatabase();
-        object.createDatabases();
+        object.createDataTables();
         var hi = object.getCSVData("src/main/resources/testCSV/server_log2month.csv"); //change to any of the other ones
         object.insertDataintoTables("LOL","Server",hi);
 

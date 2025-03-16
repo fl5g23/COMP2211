@@ -1,8 +1,11 @@
 package org.example.Controllers;
 
+import javafx.util.Pair;
+import org.example.Models.Auth;
 import org.example.Models.Campaign;
 import org.example.Models.StatsCalculator;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +15,11 @@ import java.util.Map;
  */
 public class DataController {
     private final StatsCalculator statsCalculator;
+    private final Auth authenticator;
 
     public DataController() {
         this.statsCalculator = new StatsCalculator();
+        this.authenticator = new Auth();
     }
 
     /**
@@ -22,11 +27,11 @@ public class DataController {
      */
     public void setupCampaignData(Campaign campaign) {
         if (!isCampaignExists(campaign.getName())) {
-            statsCalculator.setup(
-                    campaign,
-                    campaign.getImpressionLogFile(),
-                    campaign.getClicksLogFile(),
-                    campaign.getServerLogFile()
+            statsCalculator.addData(
+                campaign,
+                campaign.getImpressionLogFile(),
+                campaign.getClicksLogFile(),
+                campaign.getServerLogFile()
             );
         }
     }
@@ -120,5 +125,34 @@ public class DataController {
      */
     public StatsCalculator getCalculator() {
         return statsCalculator;
+    }
+
+    public void addUser(String username, String password){
+        authenticator.addUser(username, password);
+    }
+
+    public void setupDatabase(){
+        statsCalculator.setup();
+        authenticator.setup();
+    }
+
+    public ArrayList<Object> userExists(String username, String password){
+        return authenticator.userExists(username, password);
+    }
+
+    public ArrayList<String> getUnauthorisedUsers(){
+        return authenticator.getUnauthorisedUsers();
+    }
+
+    public void authoriseUser(String username, String role){
+        authenticator.authoriseUser(username, role);
+    }
+
+    public void deleteUser(String username){
+        authenticator.deleteUser(username);
+    }
+
+    public void closeAppActions(){
+        statsCalculator.closeAppActions();
     }
 }

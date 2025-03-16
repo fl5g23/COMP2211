@@ -66,7 +66,7 @@ public class MainScreen {
   ToggleButton pageleftBounceToggle = new ToggleButton("Page Left");
   ToggleButton singlePageBounceToggle = new ToggleButton("Single Page");
   private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
-
+  ComboBox<String> metricDropdown = new ComboBox<>();
   /**
    * Constructor that accepts the controller
    */
@@ -79,7 +79,7 @@ public class MainScreen {
   /**
    * Initialize and show the main screen
    */
-  public void show() {
+  public void show(String role) {
     primaryStage.setTitle("Ad Campaign Dashboard");
 
     // Top bar with title and Add Campaign button
@@ -105,16 +105,26 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
-    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, toggleHistogramTypeBtn);
+    Button authoriseUsersButton = new Button("Authorise Users");
+    authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
+
+    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, toggleHistogramTypeBtn, authoriseUsersButton);
     topBar.setSpacing(20);
+
+
+    if (role.equals("Admin")){
+      authoriseUsersButton.setVisible(true);
+    }else{
+      authoriseUsersButton.setVisible(false);
+    }
 
     // Left panel with campaign statistics
     VBox leftPanel = new VBox();
-    leftPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    leftPanel.setStyle("-fx-background-color: #e0e0e0;");
     leftPanel.setPrefSize(250.0, 334.0);
 
     HBox metricsPanel = new HBox();
-    metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 10px");
     VBox metricsLabels = new VBox();
     VBox metricsValues = new VBox();
     VBox.setVgrow(metricsLabels, Priority.ALWAYS);
@@ -165,7 +175,7 @@ public class MainScreen {
     xAxis.setLabel("Date");
 
     NumberAxis yAxis = new NumberAxis();
-    yAxis.setLabel("Count (Impressions, Clicks, Uniques, Conversions)");
+    yAxis.setLabel("Count");
 
     lineChart = new LineChart<>(xAxis, yAxis);
     lineChart.setTitle("Campaign Performance Over Time");
@@ -192,6 +202,8 @@ public class MainScreen {
     root.setTop(topBar);
     root.setLeft(leftPanel);
     root.setCenter(centerPanel);
+
+    setupCloseHandler(primaryStage);
 
     Scene scene = new Scene(root, 900, 600);
     primaryStage.setScene(scene);
@@ -241,14 +253,26 @@ public class MainScreen {
     filtersPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
     filtersPanel.setPrefSize(132, 500);
 
-    // Label
+    // Filters title
     Label filterLabel = new Label("Filters");
+    filterLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-    // Gender and Age
+    // Metric selection dropdown at top clearly
+    Label metricLabel = new Label("Metric:");
+    metricDropdown = new ComboBox<>();
+    metricDropdown.getItems().addAll("Impressions", "Clicks", "Uniques", "Conversions", "Bounces");
+    metricDropdown.setValue("Impressions");
+    metricDropdown.setPrefWidth(190);
+
+    VBox metricBox = new VBox(metricLabel, metricDropdown);
+    metricBox.setAlignment(Pos.CENTER);
+
     HBox topfilterBox = new HBox();
+    // Gender and Age ComboBoxes
     ComboBox<String> genderComboBox = new ComboBox<>();
-    genderComboBox.promptTextProperty().set("Gender");
+    genderComboBox.setPromptText("Gender");
     genderComboBox.setPrefSize(100, 26);
+
     ComboBox<String> ageComboBox = new ComboBox<>();
     ageComboBox.promptTextProperty().set("Age");
     ageComboBox.setPrefSize(100, 26);
@@ -258,9 +282,12 @@ public class MainScreen {
 
     // Income and Context
     HBox bottomfilterBox = new HBox();
+
+    // Income and Context ComboBoxes
     ComboBox<String> incomeComboBox = new ComboBox<>();
-    incomeComboBox.promptTextProperty().set("Income");
+    incomeComboBox.setPromptText("Income");
     incomeComboBox.setPrefSize(100, 26);
+
     ComboBox<String> contextComboBox = new ComboBox<>();
     contextComboBox.promptTextProperty().set("Context");
     contextComboBox.setPrefSize(100, 26);
@@ -271,22 +298,28 @@ public class MainScreen {
     // Time Granularity
     Label timeGranularityLabel = new Label("Time Granularity");
     timeGranularityLabel.setPadding(new Insets(5, 5, 0, 0));
-
     HBox timeGranularityToggleBox = new HBox();
+
+    ToggleGroup timeGranularityGroup = new ToggleGroup();
+
     ToggleButton hourToggle = new ToggleButton("Hour");
     ToggleButton dayToggle = new ToggleButton("Day");
     ToggleButton weekToggle = new ToggleButton("Week");
-    timeGranularityToggleBox.getChildren().addAll(hourToggle, dayToggle, weekToggle);
-    timeGranularityToggleBox.setPadding(new Insets(5, 5, 0, 0));
-    timeGranularityToggleBox.setAlignment(Pos.CENTER);
 
-    ToggleGroup timeGranularityGroup = new ToggleGroup();
     hourToggle.setToggleGroup(timeGranularityGroup);
     dayToggle.setToggleGroup(timeGranularityGroup);
     weekToggle.setToggleGroup(timeGranularityGroup);
 
+    timeGranularityToggleBox.getChildren().addAll(hourToggle, dayToggle, weekToggle);
+    timeGranularityToggleBox.setPadding(new Insets(5, 5, 0, 0));
+    timeGranularityToggleBox.setAlignment(Pos.CENTER);
+
     // Bounce Definition
     Label bounceDefinitionLabel = new Label("Bounce Definition");
+    ToggleGroup bounceDefinitionGroup = new ToggleGroup();
+    pageleftBounceToggle.setToggleGroup(bounceDefinitionGroup);
+    singlePageBounceToggle.setToggleGroup(bounceDefinitionGroup);
+
     bounceDefinitionLabel.setPadding(new Insets(5, 5, 0, 0));
 
     HBox bounceDefinitionBox = new HBox();
@@ -294,11 +327,8 @@ public class MainScreen {
     bounceDefinitionBox.setPadding(new Insets(5, 5, 0, 0));
     bounceDefinitionBox.setAlignment(Pos.CENTER);
 
-    ToggleGroup bounceDefinitionGroup = new ToggleGroup();
-    pageleftBounceToggle.setToggleGroup(bounceDefinitionGroup);
-    singlePageBounceToggle.setToggleGroup(bounceDefinitionGroup);
-
     // Date pickers
+    Label datePickerLabel = new Label("Date Range");
     HBox datePickerBox = new HBox();
     DatePicker datePicker1 = new DatePicker();
     datePicker1.setPrefSize(200.0, 35.0);
@@ -306,25 +336,26 @@ public class MainScreen {
     DatePicker datePicker2 = new DatePicker();
     datePicker2.setPrefSize(200.0, 35.0);
     datePickerBox.getChildren().addAll(datePicker1, toLabel, datePicker2);
-    datePickerBox.setPadding(new Insets(5, 0, 50, 0));
-    datePickerBox.setAlignment(Pos.CENTER);
+    datePickerBox.setPadding(new Insets(5, 0, 15, 0));
 
-    // Apply filters button
+    // keeping the apply Filters button at bottom
     Button applyButton = new Button("Apply filters");
     applyButton.setPrefSize(133, 26);
     applyButton.setOnAction(e -> {
       Campaign selectedCampaign = getSelectedCampaign();
       if (selectedCampaign != null) {
         String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
-        controller.generateGraph(selectedCampaign.getName(), bounceType);
+        String selectedMetric = metricDropdown.getValue();
+        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric);
         controller.updateBounceRate(selectedCampaign.getName(), bounceType);
       }
     });
 
-    filtersPanel.getChildren().addAll(
+    // Adding  content to panel
+    filtersPanel.getChildren().addAll( metricBox,
             filterLabel, topfilterBox, bottomfilterBox,
             timeGranularityLabel, timeGranularityToggleBox,
-            bounceDefinitionLabel, bounceDefinitionBox,
+            bounceDefinitionLabel, bounceDefinitionBox, datePickerLabel,
             datePickerBox, applyButton);
     filtersPanel.setAlignment(Pos.CENTER);
 
@@ -336,8 +367,10 @@ public class MainScreen {
       for (Campaign campaign : controller.getCampaigns()) {
         if (campaign.getName().equals(campaignMenuButton.getText())) {
           return campaign;
+
         }
-      }
+      }    metricDropdown.setValue("Impressions");
+
     }
     return null;
   }
@@ -393,6 +426,26 @@ public class MainScreen {
       alert.setTitle("Error");
       alert.setHeaderText("Campaign name wrong");
       alert.setContentText("Campaign name already exists");
+    }else if (type.equals("userpwdempty")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username or password invalid");
+      alert.setContentText("The username and password field cannot be empty");
+    } else if (type.equals("usernotexist")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username or password invalid");
+      alert.setContentText("The username and password combination does not exist");
+    }else if (type.equals("notauthorised")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Not authorised");
+      alert.setContentText("Your account must be authorised by the admin");
+    } else if (type.equals("usernamealreadyexists")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Username already exists");
+      alert.setContentText("This username is already registered");
+    }else if(type.equals("passwordwrong")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Password invalid");
+      alert.setContentText("Password is incorrect");
     } else {
       alert.setTitle("Error");
       alert.setHeaderText("Wrong format");
@@ -404,6 +457,8 @@ public class MainScreen {
 
   public void changeSelectedCampaign(Campaign campaign){
     campaignMenuButton.setText(campaign.getName());
+    metricDropdown.setValue("Impressions");
+
   }
 
   /**
@@ -472,7 +527,7 @@ public class MainScreen {
   /**
    * Update the performance graph with new data
    */
-  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime) {
+  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric) {
     // Clear existing chart data
 
     if (!firstGraphGeneration){
@@ -480,54 +535,23 @@ public class MainScreen {
     }
     lineChart.getData().clear();
 
-    // Find max values for each metric
-    int maxImpressions = metricsOverTime.get("Impressions").values().stream().max(Integer::compare).orElse(1);
-    int maxClicks = metricsOverTime.get("Clicks").values().stream().max(Integer::compare).orElse(1);
-    int maxUniques = metricsOverTime.get("Uniques").values().stream().max(Integer::compare).orElse(1);
-    int maxConversions = metricsOverTime.get("Conversions").values().stream().max(Integer::compare).orElse(1);
-    int maxBounces = metricsOverTime.get("Bounces").values().stream().max(Integer::compare).orElse(1);
+    if (!metricsOverTime.containsKey(selectedMetric)) {
+      System.out.println("Metric not found: " + selectedMetric);
+      return;
+    }
 
-    // Store all metrics in a map and sort them
-    Map<String, Integer> metricValues = new HashMap<>();
-    metricValues.put("Impressions", maxImpressions);
-    metricValues.put("Clicks", maxClicks);
-    metricValues.put("Uniques", maxUniques);
-    metricValues.put("Conversions", maxConversions);
-    metricValues.put("Bounces", maxBounces);
-
-    List<Map.Entry<String, Integer>> sortedMetrics = new ArrayList<>(metricValues.entrySet());
-    sortedMetrics.sort(Map.Entry.comparingByValue()); // Sort by value (ascending)
-
-    // Assign scaling factors based on ranking
-    String smallestMetric = sortedMetrics.get(0).getKey();
-    String secondSmallest = sortedMetrics.get(1).getKey();
-    String middleMetric = sortedMetrics.get(2).getKey();
-    String secondLargest = sortedMetrics.get(3).getKey();
-    String largestMetric = sortedMetrics.get(4).getKey(); // The largest one is the baseline
-
-    Map<String, Double> scaleFactors = new HashMap<>();
-    scaleFactors.put(largestMetric, 1.0); // Largest stays the same
-    scaleFactors.put(secondLargest, 50.0);
-    scaleFactors.put(middleMetric, 75.0);
-    scaleFactors.put(secondSmallest, 100.0);
-    scaleFactors.put(smallestMetric, 150.0);
-
-    // Add series to the chart
-    addSeriesToChart(metricsOverTime.get("Impressions"), "Impressions (x" + scaleFactors.get("Impressions") + ")", scaleFactors.get("Impressions"));
-    addSeriesToChart(metricsOverTime.get("Clicks"), "Clicks (x" + scaleFactors.get("Clicks") + ")", scaleFactors.get("Clicks"));
-    addSeriesToChart(metricsOverTime.get("Uniques"), "Uniques (x" + scaleFactors.get("Uniques") + ")", scaleFactors.get("Uniques"));
-    addSeriesToChart(metricsOverTime.get("Conversions"), "Conversions (x" + scaleFactors.get("Conversions") + ")", scaleFactors.get("Conversions"));
-    addSeriesToChart(metricsOverTime.get("Bounces"), "Bounces (x" + scaleFactors.get("Bounces") + ")", scaleFactors.get("Bounces"));
-
+    addSeriesToChart(metricsOverTime.get(selectedMetric), selectedMetric, 1.0);
     firstGraphGeneration = false;
   }
 
   /**
    * Helper to add series to the line chart
    */
-  private void addSeriesToChart(Map<String, Integer> dataMap, String name, double scaleFactor) {
-    XYChart.Series<String, Number> series = new XYChart.Series<>();
-    series.setName(name);
+  private void addSeriesToChart(Map<String, Integer> dataMap, String metricName, double scaleFactor) {
+      XYChart.Series<String, Number> series = new XYChart.Series<>();
+      series.setName(metricName);
+
+
 
     List<String> sortedDates = new ArrayList<>(dataMap.keySet());
     sortedDates.sort(Comparator.naturalOrder());
@@ -537,7 +561,7 @@ public class MainScreen {
       XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(date, yValue);
 
       // Add tooltip showing raw and scaled values
-      Tooltip tooltip = new Tooltip(name + "\nDate: " + date +
+      Tooltip tooltip = new Tooltip(metricName + "\nDate: " + date +
           "\nRaw: " + dataMap.get(date) + "\nScaled: " + yValue);
       Platform.runLater(() -> Tooltip.install(dataPoint.getNode(), tooltip));
 
@@ -564,4 +588,12 @@ public class MainScreen {
     ChartPanel newHistogramPanel = new ChartPanel(new ClickCostHistogram(clicksByDate).createHistogram());
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
   }
+
+  // Add this to your main application class where you set up the primary stage
+  private void setupCloseHandler(Stage primaryStage) {
+    primaryStage.setOnCloseRequest(event -> {
+      controller.closeAppActions();
+    });
+  }
+
 }
