@@ -1,6 +1,5 @@
 package org.example.Controllers;
 
-import javafx.util.Pair;
 import org.example.Models.Auth;
 import org.example.Models.Campaign;
 import org.example.Models.StatsCalculator;
@@ -95,8 +94,8 @@ public class DataController {
     /**
      * Gets metrics over time for a campaign.
      */
-    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType) {
-        return statsCalculator.getMetricsOverTime(campaignName, bounceType);
+    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender) {
+        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender);
     }
 
     /**

@@ -124,7 +124,7 @@ public class UIController {
             updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
 
-            generateGraph(campaign.getName(), "PageLeft","Impressions");
+            generateGraph(campaign.getName(), "PageLeft","Impressions","All");
         }
     }
 
@@ -178,9 +178,9 @@ public class UIController {
    * @param bounceType the type of bounce to include in the graph
    */
   // Modified generateGraph method to take a selectedMetric
-  public void generateGraph(String campaignName, String bounceType, String selectedMetric) {
+  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String selectedGender) {
     Map<String, Map<String, Integer>> metricsOverTime =
-        dataController.getMetricsOverTime(campaignName, bounceType);
+        dataController.getMetricsOverTime(campaignName, bounceType, selectedGender);
     mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
 }
         /**

@@ -270,12 +270,14 @@ public class MainScreen {
     HBox topfilterBox = new HBox();
     // Gender and Age ComboBoxes
     ComboBox<String> genderComboBox = new ComboBox<>();
+    genderComboBox.getItems().addAll("Male","Female","All");
     genderComboBox.setPromptText("Gender");
     genderComboBox.setPrefSize(100, 26);
 
     ComboBox<String> ageComboBox = new ComboBox<>();
     ageComboBox.promptTextProperty().set("Age");
     ageComboBox.setPrefSize(100, 26);
+
     topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
     topfilterBox.setPadding(new Insets(5, 5, 0, 0));
     topfilterBox.setAlignment(Pos.CENTER);
@@ -346,7 +348,8 @@ public class MainScreen {
       if (selectedCampaign != null) {
         String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
         String selectedMetric = metricDropdown.getValue();
-        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric);
+        String selectedGender = genderComboBox.getValue();
+        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric,selectedGender);
         controller.updateBounceRate(selectedCampaign.getName(), bounceType);
       }
     });
