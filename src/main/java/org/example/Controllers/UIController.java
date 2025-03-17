@@ -180,7 +180,7 @@ public class UIController {
   // Modified generateGraph method to take a selectedMetric
   public void generateGraph(String campaignName, String bounceType, String selectedMetric, String selectedGender) {
     Map<String, Map<String, Integer>> metricsOverTime =
-        dataController.getMetricsOverTime(campaignName, bounceType, selectedGender);
+            dataController.getMetricsOverTime(campaignName, bounceType, selectedGender, selectedMetric);
     mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
 }
         /**

@@ -73,7 +73,7 @@ public class importFilestoDatabase {
     public void insertDataintoTables(String campaignName, String table, List<List<String>> data) {
         final String url = "jdbc:sqlite:mainData.db";
         final String sql;
-        final int BATCH_SIZE = 1_000;  // Process in chunks (tune this if needed)
+        final int BATCH_SIZE = 1_000;
         int numberProcessed = 0;
 
         // SQL Insert Statements for each table

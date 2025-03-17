@@ -359,29 +359,38 @@ public class StatsCalculator {
 
     return false; // Default to false if something goes wrong
   }
-  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender) {
+  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String selectedMetric) {
     Map<String, Map<String, Integer>> metricsOverTime = new HashMap<>();
-    metricsOverTime.put("Impressions", new HashMap<>());
-    metricsOverTime.put("Clicks", new HashMap<>());
-    metricsOverTime.put("Uniques", new HashMap<>());
-    metricsOverTime.put("Conversions", new HashMap<>());
-    metricsOverTime.put("Bounces", new HashMap<>()); // Adding Bounces
+    metricsOverTime.put(selectedMetric, new HashMap<>());
 
     if (selectedGender == null) {selectedGender = "All";}
 
+    String metricSQL = "";
     // base SQL queries
-    String impressionsSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?";
-    String clicksSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
-    String uniquesSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
-    String conversionsSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Conversion = 'Yes' AND i.Campaign = ?";
-
-    String bounceSQL;
-    if (bounceType.equals("SinglePage")) {
-      bounceSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Pages_Viewed = 1 AND i.Campaign = ?";
-    } else if (bounceType.equals("PageLeft")) {
-      bounceSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND i.Campaign = ?";
-    } else {
-      throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
+    switch (selectedMetric){
+      case "Impressions":
+        metricSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?";
+        break;
+      case "Clicks":
+        metricSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        break;
+      case "Uniques":
+        metricSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        break;
+      case "Conversions":
+        metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Conversion = 'Yes' AND i.Campaign = ?";
+        break;
+      case "Bounces":
+        if (bounceType.equals("SinglePage")) {
+          metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Pages_Viewed = 1 AND i.Campaign = ?";
+        } else if (bounceType.equals("PageLeft")) {
+          metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND i.Campaign = ?";
+        } else {
+          throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
+        }
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid metric selected: " + selectedMetric);
     }
 
     List<String> parameters = new ArrayList<>();
@@ -389,30 +398,19 @@ public class StatsCalculator {
 
     //handling gender filtering
     if (!selectedGender.equalsIgnoreCase("All")) {
-      impressionsSQL += " AND Gender = ?";
-      String genderCondition = " AND i.Gender = ?";
-
-      clicksSQL += genderCondition;
-      uniquesSQL += genderCondition;
-      conversionsSQL += genderCondition;
-      bounceSQL += genderCondition;
-
+      if (selectedMetric.equals("Impressions")) {
+        metricSQL += " AND Gender = ?";
+      } else {
+        metricSQL += " AND i.Gender = ?";
+      }
       parameters.add(selectedGender);
     }
 
     //add ordering by date
-    impressionsSQL += " GROUP BY Time";
-    clicksSQL += " GROUP BY Time";
-    uniquesSQL += " GROUP BY Time";
-    conversionsSQL += " GROUP BY Time";
-    bounceSQL += " GROUP BY Time";
+    metricSQL += " GROUP BY Time";
 
     try {
-      addDataToMap(metricsOverTime.get("Impressions"), impressionsSQL, parameters);
-      addDataToMap(metricsOverTime.get("Clicks"), clicksSQL, parameters);
-      addDataToMap(metricsOverTime.get("Uniques"), uniquesSQL, parameters);
-      addDataToMap(metricsOverTime.get("Conversions"), conversionsSQL, parameters);
-      addDataToMap(metricsOverTime.get("Bounces"), bounceSQL, parameters); // Fetch bounce data
+      addDataToMap(metricsOverTime.get(selectedMetric), metricSQL, parameters);
     } catch (SQLException e) {
       e.printStackTrace();
     }
@@ -475,14 +473,7 @@ public class StatsCalculator {
   //testing
   public static void main (String[] args){
     StatsCalculator stats = new StatsCalculator();
-    //    stats.getCoreMetrics("1");
-    //    stats.calculateTotalCost("1");
-    //    stats.calculateCTR("1");
-    //    stats.calculateCPC("1");
-    //    stats.calculateCPA("1");
-    //    stats.calculateCPM("1");
-    //    stats.calculateBounceRate("1");
-    //    stats.getCostsList("1");
-//    System.out.println(stats.isCampaignExists(new Campaign("!",new File(""),new File(""),new File(""))));
+    Map<String, Map<String, Integer>> result = stats.getMetricsOverTime("qwsa", "PageLeft", "Male", "Impressions");
+    System.out.println(result);
   }
 }

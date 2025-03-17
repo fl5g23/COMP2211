@@ -94,8 +94,8 @@ public class DataController {
     /**
      * Gets metrics over time for a campaign.
      */
-    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender) {
-        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender);
+    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String selectedMetric) {
+        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender, selectedMetric);
     }
 
     /**
