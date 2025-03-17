@@ -1,6 +1,8 @@
 package org.example.Models;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.sql.*;
 
@@ -396,6 +398,132 @@ public class StatsCalculator {
 
     return metricsOverTime;
   }
+  public Map<String, Map<String, Integer>> getMetricsHourly(String campaignName, String bounceType) {
+    Map<String, Map<String, Integer>> metricsHourly = new TreeMap<>();
+    metricsHourly.put("Impressions", new TreeMap<>());
+    metricsHourly.put("Clicks", new TreeMap<>());
+    metricsHourly.put("Uniques", new TreeMap<>());
+    metricsHourly.put("Conversions", new TreeMap<>());
+    metricsHourly.put("Bounces", new TreeMap<>());
+
+    // Change grouping clearly to hourly
+    String hourlyFormat = "%Y-%m-%d %H:00";
+
+    String impressionsSQL = "SELECT strftime('" + hourlyFormat + "', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ? GROUP BY Time";
+    String clicksSQL = "SELECT strftime('" + hourlyFormat + "', Date) AS Time, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Time";
+    String uniquesSQL = "SELECT strftime('" + hourlyFormat + "', Date) AS Time, COUNT(DISTINCT ID) FROM Clicks WHERE Campaign = ? GROUP BY Time";
+    String conversionsSQL = "SELECT strftime('" + hourlyFormat + "', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = ? GROUP BY Time";
+
+    String bounceSQL;
+    if (bounceType.equals("SinglePage")) {
+      bounceSQL = "SELECT strftime('" + hourlyFormat + "', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Pages_Viewed = 1 AND Campaign = ? GROUP BY Time";
+    } else if (bounceType.equals("PageLeft")) {
+      bounceSQL = "SELECT strftime('" + hourlyFormat + "', Entry_Date) AS Time, COUNT(*) FROM Server WHERE Exit_Date != 'n/a' AND Conversion = 'No' AND Campaign = ? GROUP BY Time";
+    } else {
+      throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
+    }
+
+    List<String> parameters = List.of(campaignName);
+
+    try {
+      addDataToMap(metricsHourly.get("Impressions"), impressionsSQL, parameters);
+      addDataToMap(metricsHourly.get("Clicks"), clicksSQL, parameters);
+      addDataToMap(metricsHourly.get("Uniques"), uniquesSQL, parameters);
+      addDataToMap(metricsHourly.get("Conversions"), conversionsSQL, parameters);
+      addDataToMap(metricsHourly.get("Bounces"), bounceSQL, parameters);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return metricsHourly;
+  }
+  public LocalDate getCampaignStartDate(String campaignName) {
+    String sql = "SELECT MIN(Date) FROM Impressions WHERE Campaign = ?";
+    LocalDate startDate = null;
+
+    try (ResultSet rs = executeSQL(sql, List.of(campaignName))) {
+      if (rs != null && rs.next()) {
+        startDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return startDate;
+  }
+  public Map<String, Map<String, Integer>> getMetricsWeekly(String campaignName, String bounceType) {
+    LocalDate startDate = getCampaignStartDate(campaignName);
+    if (startDate == null) {
+      throw new IllegalStateException("Campaign start date not found for " + campaignName);
+    }
+
+    Map<String, Map<String, Integer>> weeklyMetrics = new TreeMap<>();
+
+    try {
+      fetchWeeklyData("Impressions", "Date", "Impressions", campaignName, startDate, weeklyMetrics);
+      fetchWeeklyData("Clicks", "Date", "Clicks", campaignName, startDate, weeklyMetrics);
+      fetchWeeklyUniques(campaignName, startDate, weeklyMetrics);
+      fetchWeeklyData("Server", "Entry_Date", "Conversions", campaignName, startDate, weeklyMetrics, "Conversion = 'Yes'");
+
+      String bounceCondition = bounceType.equals("SinglePage")
+          ? "Pages_Viewed = 1"
+          : "Exit_Date != 'n/a' AND Conversion = 'No'";
+
+      fetchWeeklyData("Server", "Entry_Date", "Bounces", campaignName, startDate, weeklyMetrics, bounceCondition);
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return weeklyMetrics;
+  }
+
+  // Helper to fetch weekly data (clearly adjusted to use dates instead of week numbers)
+  private void fetchWeeklyData(String table, String dateColumn, String metric, String campaignName,
+      LocalDate startDate, Map<String, Map<String, Integer>> weeklyMetrics) throws SQLException {
+    fetchWeeklyData(table, dateColumn, metric, campaignName, startDate, weeklyMetrics, "1=1");
+  }
+
+  private void fetchWeeklyData(String table, String dateColumn, String metric, String campaignName,
+      LocalDate startDate, Map<String, Map<String, Integer>> weeklyMetrics, String extraCondition) throws SQLException {
+    String sql = String.format("SELECT %s FROM %s WHERE Campaign = ? AND %s", dateColumn, table, extraCondition);
+    ResultSet rs = executeSQL(sql, List.of(campaignName));
+
+    while (rs != null && rs.next()) {
+      LocalDate date = LocalDate.parse(rs.getString(dateColumn).substring(0, 10));
+      long days = ChronoUnit.DAYS.between(startDate, date);
+      int week = (int)(days / 7);
+      // Clearly label week by actual starting date of that week
+      LocalDate weekStart = startDate.plusWeeks(week);
+      String weekLabel = weekStart.toString();
+
+      weeklyMetrics
+          .computeIfAbsent(weekLabel, k -> new HashMap<>())
+          .merge(metric, 1, Integer::sum);
+    }
+  }
+
+  // Uniques clearly adjusted too:
+  private void fetchWeeklyUniques(String campaignName, LocalDate startDate, Map<String, Map<String, Integer>> weeklyMetrics) throws SQLException {
+    ResultSet rs = executeSQL("SELECT Date, ID FROM Clicks WHERE Campaign = ?", List.of(campaignName));
+    Map<String, Set<String>> uniquesPerWeek = new HashMap<>();
+
+    while (rs != null && rs.next()) {
+      LocalDate date = LocalDate.parse(rs.getString("Date").substring(0, 10));
+      int week = (int)(ChronoUnit.DAYS.between(startDate, date) / 7);
+      LocalDate weekStart = startDate.plusWeeks(week);
+      String weekLabel = weekStart.toString();
+
+      uniquesPerWeek
+          .computeIfAbsent(weekLabel, k -> new HashSet<>())
+          .add(rs.getString("ID"));
+    }
+
+    uniquesPerWeek.forEach((week, ids) ->
+        weeklyMetrics.computeIfAbsent(week, k -> new HashMap<>())
+            .put("Uniques", ids.size()));
+  }
+
 
   // Helper function to fill data maps
   private void addDataToMap(Map<String, Integer> dataMap, String sql, List<String> parameters) throws SQLException {

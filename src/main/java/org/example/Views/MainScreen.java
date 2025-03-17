@@ -346,10 +346,27 @@ public class MainScreen {
       if (selectedCampaign != null) {
         String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
         String selectedMetric = metricDropdown.getValue();
-        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric);
+
+        // Clearly determine granularity based on selected toggle
+        Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
+        String granularity;
+
+        if (selectedToggle == hourToggle) {
+          granularity = "Hourly";
+        } else if (selectedToggle == dayToggle) {
+          granularity = "Daily";
+        } else if (selectedToggle == weekToggle) {
+          granularity = "Weekly";
+        } else {
+          granularity = "Daily"; // Default option clearly set here
+        }
+
+        // Call your existing generateGraph method clearly
+        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric, granularity);
         controller.updateBounceRate(selectedCampaign.getName(), bounceType);
       }
     });
+
 
     // Adding  content to panel
     filtersPanel.getChildren().addAll( metricBox,
@@ -528,7 +545,7 @@ public class MainScreen {
    * Update the performance graph with new data
    */
   public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric) {
-    // Clear existing chart data
+    System.out.println("Data received in UI: " + metricsOverTime);
 
     if (!firstGraphGeneration){
       lineChart.setAnimated(true);

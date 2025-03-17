@@ -98,6 +98,12 @@ public class DataController {
     public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType) {
         return statsCalculator.getMetricsOverTime(campaignName, bounceType);
     }
+    public Map<String, Map<String, Integer>> getMetricsWeekly(String campaignName, String bounceType) {
+        return statsCalculator.getMetricsWeekly(campaignName, bounceType);
+    }
+    public Map<String, Map<String, Integer>> getMetricsHourly(String campaignName, String bounceType) {
+        return statsCalculator.getMetricsHourly(campaignName, bounceType);
+    }
 
     /**
      * Gets costs list for a campaign.
