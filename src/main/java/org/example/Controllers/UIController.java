@@ -125,9 +125,8 @@ public class UIController {
             updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
 
-            generateGraph(campaign.getName(), "PageLeft","Impressions","Daily");
-        }
-    }
+            generateGraph(campaign.getName(), "PageLeft","Impressions","Daily","All");
+}}
 
 
     /**
@@ -178,28 +177,24 @@ public class UIController {
    * @param campaignName the name of the campaign
    * @param bounceType the type of bounce to include in the graph
    */
-  // Modified generateGraph method to take a selectedMetric
-  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String granularity) {
+  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String granularity, String selectedGender) {
     Map<String, Map<String, Integer>> metricsOverTime;
 
     switch (granularity) {
       case "Hourly":
-        metricsOverTime = dataController.getMetricsHourly(campaignName, bounceType);
-        System.out.println("hourly  data fetched: " + metricsOverTime);  // Debug
-
+        metricsOverTime = dataController.getMetricsHourly(campaignName, bounceType, selectedGender);
+        System.out.println("hourly data fetched: " + metricsOverTime);  // Debug
         break;
 
       case "Daily":
-        metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType);
-        System.out.println("daily  data fetched: " + metricsOverTime);  // Debug
-
+        metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType, selectedGender);
+        System.out.println("daily data fetched: " + metricsOverTime);  // Debug
         break;
 
       case "Weekly": {
-        Map<String, Map<String, Integer>> weeklyMetrics = dataController.getMetricsWeekly(campaignName, bounceType);
-        metricsOverTime = reformatWeeklyData(weeklyMetrics);
+        Map<String, Map<String, Integer>> weeklyMetrics = dataController.getMetricsWeekly(campaignName, bounceType, selectedGender);
+        metricsOverTime = weeklyMetrics;
         System.out.println("weekly data fetched: " + metricsOverTime);  // Debug
-
         break;
       }
 
@@ -207,29 +202,9 @@ public class UIController {
         throw new IllegalArgumentException("Unknown granularity: " + granularity);
     }
 
-    System.out.println("Final Data sent to Graph: " + metricsOverTime); // Debugging
-
     mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
   }
-  private Map<String, Map<String, Integer>> reformatWeeklyData(Map<String, Map<String, Integer>> weeklyData) {
-    Map<String, Map<String, Integer>> reformattedData = new TreeMap<>();
-
-    for (Map.Entry<String, Map<String, Integer>> entry : weeklyData.entrySet()) {
-      String weekStartDate = entry.getKey(); // Key is the date (YYYY-MM-DD)
-      Map<String, Integer> metrics = entry.getValue();
-
-      for (Map.Entry<String, Integer> metricEntry : metrics.entrySet()) {
-        String metricName = metricEntry.getKey();
-        int metricValue = metricEntry.getValue();
-
-        reformattedData
-            .computeIfAbsent(metricName, k -> new TreeMap<>())
-            .put(weekStartDate, metricValue);
-      }
-    }
-
-    return reformattedData;
-  }
+//
 
   /**
          * Updates the histogram display.

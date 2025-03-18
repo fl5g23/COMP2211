@@ -270,12 +270,14 @@ public class MainScreen {
     HBox topfilterBox = new HBox();
     // Gender and Age ComboBoxes
     ComboBox<String> genderComboBox = new ComboBox<>();
+    genderComboBox.getItems().addAll("Male","Female","All");
     genderComboBox.setPromptText("Gender");
     genderComboBox.setPrefSize(100, 26);
 
     ComboBox<String> ageComboBox = new ComboBox<>();
     ageComboBox.promptTextProperty().set("Age");
     ageComboBox.setPrefSize(100, 26);
+
     topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
     topfilterBox.setPadding(new Insets(5, 5, 0, 0));
     topfilterBox.setAlignment(Pos.CENTER);
@@ -346,6 +348,7 @@ public class MainScreen {
       if (selectedCampaign != null) {
         String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
         String selectedMetric = metricDropdown.getValue();
+        String selectedGender = genderComboBox.getValue();
 
         // Clearly determine granularity based on selected toggle
         Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
@@ -361,10 +364,13 @@ public class MainScreen {
           granularity = "Daily"; // Default option clearly set here
         }
 
-        // Call your existing generateGraph method clearly
-        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric, granularity);
+        // Call generateGraph method with both granularity and gender filtering
+        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric, granularity, selectedGender);
+
+        // Update the bounce rate calculation
         controller.updateBounceRate(selectedCampaign.getName(), bounceType);
       }
+
     });
 
 
