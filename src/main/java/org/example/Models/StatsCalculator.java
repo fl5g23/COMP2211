@@ -1,6 +1,7 @@
 package org.example.Models;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 import java.sql.*;
 
@@ -359,64 +360,226 @@ public class StatsCalculator {
 
     return false; // Default to false if something goes wrong
   }
-  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String selectedMetric) {
-    Map<String, Map<String, Integer>> metricsOverTime = new HashMap<>();
-    metricsOverTime.put(selectedMetric, new HashMap<>());
+  //daily
+  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String timeGranularity, String selectedMetric) {
 
-    if (selectedGender == null) {selectedGender = "All";}
+    Map<String, Map<String, Integer>> metrics = new TreeMap<>();
 
-    String metricSQL = "";
-    // base SQL queries
-    switch (selectedMetric){
+    String sql = "";
+
+    // Validate and normalize inputs
+    if (selectedGender == null || selectedGender.isEmpty()) {
+      selectedGender = "All";
+    }
+
+    // Validate time granularity option
+    if (!Arrays.asList("daily", "hourly", "weekly").contains(timeGranularity.toLowerCase())) {
+      throw new IllegalArgumentException("Invalid time granularity. Must be 'daily', 'hourly', or 'weekly'");
+    }
+
+    // Create result map structure
+
+    metrics.put(selectedMetric, new TreeMap<>());
+    // Define time format based on granularity
+    String timeFormat;
+    switch (timeGranularity.toLowerCase()) {
+      case "hourly":
+        timeFormat = "%Y-%m-%d %H:00";
+        break;
+      case "daily":
+        timeFormat = "%Y-%m-%d";
+        break;
+      case "weekly":
+        // Weekly requires special handling
+        return getMetricsWeekly(campaignName, bounceType, selectedGender, selectedMetric);
+      default:
+        timeFormat = "%Y-%m-%d"; // Default to daily if something goes wrong
+    }
+
+    switch (selectedMetric) {
       case "Impressions":
-        metricSQL = "SELECT strftime('%Y-%m-%d', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?";
         break;
+
       case "Clicks":
-        metricSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
         break;
+
       case "Uniques":
-        metricSQL = "SELECT strftime('%Y-%m-%d', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
         break;
+
       case "Conversions":
-        metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Conversion = 'Yes' AND i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Conversion = 'Yes' AND i.Campaign = ?";
         break;
+
       case "Bounces":
         if (bounceType.equals("SinglePage")) {
-          metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Pages_Viewed = 1 AND i.Campaign = ?";
+          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Pages_Viewed = 1 AND i.Campaign = ?";
         } else if (bounceType.equals("PageLeft")) {
-          metricSQL = "SELECT strftime('%Y-%m-%d', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND i.Campaign = ?";
+          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND i.Campaign = ?";
         } else {
           throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
         }
-        break;
-      default:
-        throw new IllegalArgumentException("Invalid metric selected: " + selectedMetric);
     }
 
+    // Setup parameters
     List<String> parameters = new ArrayList<>();
     parameters.add(campaignName);
 
-    //handling gender filtering
-    if (!selectedGender.equalsIgnoreCase("All")) {
-      if (selectedMetric.equals("Impressions")) {
-        metricSQL += " AND Gender = ?";
-      } else {
-        metricSQL += " AND i.Gender = ?";
-      }
+    // Apply gender filtering if needed
+    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
+      sql += " AND Gender = ?";
+      parameters.add(selectedGender);
+
+    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
+      String genderCondition = " AND i.Gender = ?";
+
+      sql += genderCondition;
+
       parameters.add(selectedGender);
     }
+    // Group by time
+    sql += " GROUP BY Time";
 
-    //add ordering by date
-    metricSQL += " GROUP BY Time";
-
+    // Execute queries and populate result maps
     try {
-      addDataToMap(metricsOverTime.get(selectedMetric), metricSQL, parameters);
+      addDataToMap(metrics.get(selectedMetric), sql, parameters);
     } catch (SQLException e) {
       e.printStackTrace();
     }
 
-    return metricsOverTime;
+    return metrics;
   }
+
+  // Keep this method separate for weekly metrics since it requires more complex date calculations
+  public Map<String, Map<String, Integer>> getMetricsWeekly(String campaignName, String bounceType, String selectedGender, String selectedMetric) {
+
+    String sql = "";
+
+    String bounceCondition;
+
+    if (selectedGender == null || selectedGender.isEmpty()) {
+      selectedGender = "All";
+    }
+
+    LocalDate campaignStart = getCampaignStartDate(campaignName);
+    if (campaignStart == null) {
+      throw new IllegalStateException("Campaign start date not found for " + campaignName);
+    }
+
+    LocalDate campaignEnd = getCampaignEndDate(campaignName);
+    if (campaignEnd == null) {
+      throw new IllegalStateException("Campaign end date not found for " + campaignName);
+    }
+
+    Map<String, Map<String, Integer>> weeklyMetrics = new TreeMap<>();
+    weeklyMetrics.put(selectedMetric, new TreeMap<>());
+
+
+    switch (selectedMetric) {
+      case "Impressions":
+        sql = "SELECT DATE(?, '+' || (CAST((julianday(Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
+                "FROM Impressions " +
+                "WHERE Campaign = ? AND Date BETWEEN ? AND ?";
+        break;
+
+      case "Clicks":
+        sql = "SELECT DATE(?, '+' || (CAST((julianday(c.Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
+                "FROM Clicks c JOIN Impressions i ON c.ID = i.ID " +
+                "WHERE i.Campaign = ? AND c.Date BETWEEN ? AND ?";
+        break;
+
+      case "Uniques":
+        sql = "SELECT DATE(?, '+' || (CAST((julianday(c.Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(DISTINCT c.ID) " +
+                "FROM Clicks c JOIN Impressions i ON c.ID = i.ID " +
+                "WHERE i.Campaign = ? AND c.Date BETWEEN ? AND ?";
+        break;
+
+      case "Conversions":
+        sql = "SELECT DATE(?, '+' || (CAST((julianday(s.Entry_Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
+                "FROM Server s JOIN Impressions i ON s.ID = i.ID " +
+                "WHERE s.Conversion = 'Yes' AND i.Campaign = ? AND s.Entry_Date BETWEEN ? AND ?";
+        break;
+
+      case "Bounces":
+        if ("SinglePage".equalsIgnoreCase(bounceType)) {
+          bounceCondition = "s.Pages_Viewed = 1";
+        } else if ("PageLeft".equalsIgnoreCase(bounceType)) {
+          bounceCondition = "s.Exit_Date != 'n/a' AND s.Conversion = 'No'";
+        } else {
+          throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
+        }
+        sql = "SELECT DATE(?, '+' || (CAST((julianday(s.Entry_Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
+                "FROM Server s JOIN Impressions i ON s.ID = i.ID " +
+                "WHERE " + bounceCondition + " AND i.Campaign = ? AND s.Entry_Date BETWEEN ? AND ?";
+    }
+
+    List<String> impParams = new ArrayList<>();
+    impParams.add(campaignStart.toString());
+    impParams.add(campaignStart.toString());
+    impParams.add(campaignName);
+    impParams.add(campaignStart.toString());
+    impParams.add(campaignEnd.toString());
+
+    // Apply gender filtering if needed
+    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
+      sql += " AND Gender = ?";
+    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
+      String genderCondition = " AND i.Gender = ?";
+
+      sql += genderCondition;
+
+      impParams.add(selectedGender);
+    }
+
+    sql += " GROUP BY WeekStart";
+
+    try {
+      addWeeklyDataToMap(weeklyMetrics.get(selectedMetric), sql, impParams);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return weeklyMetrics;
+  }
+
+  public LocalDate getCampaignStartDate(String campaignName) {
+    String sql = "SELECT MIN(Date) FROM Impressions WHERE Campaign = ?";
+    LocalDate startDate = null;
+    try (ResultSet rs = executeSQL(sql, List.of(campaignName))) {
+      if (rs != null && rs.next()) {
+        startDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return startDate;
+  }
+
+  public LocalDate getCampaignEndDate(String campaignName) {
+    String sql = "SELECT MAX(Date) FROM Impressions WHERE Campaign = ?";
+    LocalDate endDate = null;
+    try (ResultSet rs = executeSQL(sql, List.of(campaignName))) {
+      if (rs != null && rs.next()) {
+        endDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return endDate;
+  }
+
+  // Helper method to execute the query and put results into the provided map.
+  private void addWeeklyDataToMap(Map<String, Integer> map, String sql, List<String> parameters) throws SQLException {
+    ResultSet rs = executeSQL(sql, parameters);
+    while (rs != null && rs.next()) {
+      String week = rs.getString("WeekStart");
+      int count = rs.getInt(2);
+      map.put(week, count);
+    }
+  }
+
 
   // Helper function to fill data maps
   private void addDataToMap(Map<String, Integer> dataMap, String sql, List<String> parameters) throws SQLException {
@@ -436,7 +599,7 @@ public class StatsCalculator {
 
 
   public Map<String, Integer> getClicksOverTime(String campaignName) {
-    Map<String, Integer> clicksOverTime = new TreeMap<>(); // Ensures sorted order by date
+    Map<String, Integer> clicksOverTime = new TreeMap<>();
 
     // SQL query to group clicks by day
     String clicksByTimeSQL = "SELECT strftime('%Y-%m-%d', Date) AS Day, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Day ORDER BY Day;";
@@ -473,7 +636,14 @@ public class StatsCalculator {
   //testing
   public static void main (String[] args){
     StatsCalculator stats = new StatsCalculator();
-    Map<String, Map<String, Integer>> result = stats.getMetricsOverTime("qwsa", "PageLeft", "Male", "Impressions");
-    System.out.println(result);
+    //    stats.getCoreMetrics("1");
+    //    stats.calculateTotalCost("1");
+    //    stats.calculateCTR("1");
+    //    stats.calculateCPC("1");
+    //    stats.calculateCPA("1");
+    //    stats.calculateCPM("1");
+    //    stats.calculateBounceRate("1");
+    //    stats.getCostsList("1");
+//    System.out.println(stats.isCampaignExists(new Campaign("!",new File(""),new File(""),new File(""))));
   }
 }

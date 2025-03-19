@@ -37,6 +37,7 @@ public class MainScreen {
   private boolean isDataDownloaded = false; // Track if data is available for histograms
   private UIController controller; // Reference to the controller
   Boolean firstGraphGeneration = true; //solves bug with chart generation
+  String lastGranularity = "";
 
   // Core metric labels
   Label keyMetricsTitle = new Label("Key Metrics:");
@@ -349,10 +350,30 @@ public class MainScreen {
         String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
         String selectedMetric = metricDropdown.getValue();
         String selectedGender = genderComboBox.getValue();
-        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric,selectedGender);
+
+        // Clearly determine granularity based on selected toggle
+        Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
+        String granularity;
+
+        if (selectedToggle == hourToggle) {
+          granularity = "Hourly";
+        } else if (selectedToggle == dayToggle) {
+          granularity = "Daily";
+        } else if (selectedToggle == weekToggle) {
+          granularity = "Weekly";
+        } else {
+          granularity = "Daily"; // Default option clearly set here
+        }
+
+        // Call generateGraph method with both granularity and gender filtering
+        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric, granularity, selectedGender);
+
+        // Update the bounce rate calculation
         controller.updateBounceRate(selectedCampaign.getName(), bounceType);
       }
+
     });
+
 
     // Adding  content to panel
     filtersPanel.getChildren().addAll( metricBox,
@@ -530,12 +551,20 @@ public class MainScreen {
   /**
    * Update the performance graph with new data
    */
-  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric) {
-    // Clear existing chart data
+  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric, String granularity) {
+    System.out.println("Data received in UI: " + metricsOverTime);
+
+//    if (!lastGranularity.equals(granularity)){
+//      lineChart.setAnimated(false);
+//      lastGranularity = granularity;
+//    }else{
+//      lineChart.setAnimated(true);
+//    }
 
     if (!firstGraphGeneration){
       lineChart.setAnimated(true);
     }
+
     lineChart.getData().clear();
 
     if (!metricsOverTime.containsKey(selectedMetric)) {
@@ -599,4 +628,9 @@ public class MainScreen {
     });
   }
 
-}
+  public void setFirstGenerationFilters(){
+    metricDropdown.setValue("Impressions");
+    pageleftBounceToggle.setSelected(true);
+  }
+
+  }

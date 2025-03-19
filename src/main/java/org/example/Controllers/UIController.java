@@ -1,5 +1,6 @@
 package org.example.Controllers;
 
+import java.util.TreeMap;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
@@ -124,9 +125,10 @@ public class UIController {
             updateCampaignName(currentCampaign);
             updateStatistics(campaign.getName());
 
-            generateGraph(campaign.getName(), "PageLeft","Impressions","All");
-        }
-    }
+            generateGraph(campaign.getName(), "PageLeft","Impressions","Daily","All");
+            mainScreen.setFirstGenerationFilters();
+
+}}
 
 
     /**
@@ -177,13 +179,16 @@ public class UIController {
    * @param campaignName the name of the campaign
    * @param bounceType the type of bounce to include in the graph
    */
-  // Modified generateGraph method to take a selectedMetric
-  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String selectedGender) {
-    Map<String, Map<String, Integer>> metricsOverTime =
-            dataController.getMetricsOverTime(campaignName, bounceType, selectedGender, selectedMetric);
-    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
-}
-        /**
+  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String granularity, String selectedGender) {
+    Map<String, Map<String, Integer>> metricsOverTime;
+
+    metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType, selectedGender, granularity, selectedMetric);
+
+    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric, granularity);
+  }
+//
+
+  /**
          * Updates the histogram display.
          *
          * @param campaignName the name of the campaign
