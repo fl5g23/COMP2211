@@ -1,6 +1,5 @@
 package org.example.Controllers;
-
-import java.util.TreeMap;
+import java.time.LocalDateTime;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
@@ -12,6 +11,7 @@ import org.example.Views.MainScreen;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -123,10 +123,22 @@ public class UIController {
         if (!currentCampaign.equals(campaign)) {
             currentCampaign = campaign;
             updateCampaignName(currentCampaign);
+            dataController.resetFiltersSQL();
             updateStatistics(campaign.getName());
 
-            generateGraph(campaign.getName(), "PageLeft","Impressions","Daily","All");
-            mainScreen.setFirstGenerationFilters();
+            Map<String, String> filtersMap = new HashMap<>();
+            filtersMap.put("campaignName", campaign.getName());
+            filtersMap.put("bounceDefinition", "PageLeft");
+            filtersMap.put("selectedMetric", "Impressions");
+            filtersMap.put("Granularity","Daily");
+            filtersMap.put("Gender", "All");
+
+            generateGraph(filtersMap);
+
+            LocalDateTime startdate = dataController.getCalculator().getCampaignStartDate(campaign.getName());
+            LocalDateTime enddate = dataController.getCalculator().getCampaignEndDate(campaign.getName());
+
+            mainScreen.setFirstGenerationFilters(startdate, enddate);
 
 }}
 
@@ -157,6 +169,61 @@ public class UIController {
         mainScreen.updateMetricsDisplay(coreMetrics, bounceRate, ctr, cpa, cpc, cpm, totalCost);
     }
 
+  public void queryStatistics(
+      Map<String, String> filtersMap, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+
+    String gender = filtersMap.get("Gender");
+    String age = filtersMap.get("Age");
+    String income = filtersMap.get("Income");
+    String context = filtersMap.get("Context");
+    String startDateTimeStr = startDateTime.toString().replace("T", " ");
+    String endDateTimeStr = endDateTime.toString().replace("T", " ");
+
+    ArrayList<String> sqlStatements = new ArrayList<>();
+
+    String[] tablePrefixes = {"", "c", "s"};
+    for (String table : tablePrefixes) {
+        String sqlAppend = "";
+        String prefix = "";
+        String dateIdentifier = "DATE";
+
+        if (!table.equals("")){
+            prefix = "u.";
+        }
+        if (table.equals("s")){
+            dateIdentifier = "Entry_Date";
+        }
+
+      if (gender != null && gender != "All") {
+        sqlAppend += String.format(" %sGender = '%s' ", prefix, gender);
+      }
+      if (age != null && age != "All" ) {
+        sqlAppend += String.format("~ %sAge = '%s' ", prefix, age);
+      }
+      if (income != null && income != "All") {
+        sqlAppend += String.format("~ %sIncome = '%s' ", prefix, income);
+      }
+      if (context != null && context != "All") {
+        sqlAppend += String.format("~ %sContext = '%s' ", prefix, context);
+      }
+      sqlAppend += String.format("~ %s BETWEEN '%s' AND '%s'", dateIdentifier, startDateTimeStr, endDateTimeStr);
+
+      // Replace "~" with "AND" and remove the trailing "AND"
+      sqlAppend = sqlAppend.replace("~", "AND");
+
+      // Check for the trailing "AND" and remove it if present
+      if (!sqlAppend.startsWith("AND")) {
+        sqlAppend = "AND " + sqlAppend;
+      }
+      sqlStatements.add(sqlAppend);
+    }
+
+    dataController.primeForQueries(sqlStatements);
+    String campaignName = filtersMap.get("campaignName");
+    updateStatistics(campaignName);
+    generateGraph(filtersMap);
+  }
+
     /**
      * Updates the bounce rate based on the selected definition.
      *
@@ -173,19 +240,19 @@ public class UIController {
         mainScreen.updateBounceRateDisplay(bounceRate);
     }
 
+
+
   /**
    * Generates the performance graph for the selected campaign.
    *
-   * @param campaignName the name of the campaign
-   * @param bounceType the type of bounce to include in the graph
+   * @param filterSettings the name of the campaign
    */
-  public void generateGraph(String campaignName, String bounceType, String selectedMetric, String granularity, String selectedGender) {
+  public void generateGraph(Map<String,String> filterSettings) {
     Map<String, Map<String, Integer>> metricsOverTime;
-
-    metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType, selectedGender, granularity, selectedMetric);
-
-    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric, granularity);
+    metricsOverTime = dataController.getMetricsOverTime(filterSettings);
+    mainScreen.updatePerformanceGraph(metricsOverTime, filterSettings.get("selectedMetric"), filterSettings.get("Granularity"));
   }
+
 //
 
   /**
@@ -298,6 +365,7 @@ public class UIController {
     public void closeAppActions(){
         dataController.closeAppActions();
     }
+
 
 
 }

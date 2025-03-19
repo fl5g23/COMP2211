@@ -1,5 +1,7 @@
 package org.example.Views;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import javafx.application.Platform;
@@ -13,8 +15,6 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 
 import java.io.File;
 
@@ -66,6 +66,10 @@ public class MainScreen {
 
   ToggleButton pageleftBounceToggle = new ToggleButton("Page Left");
   ToggleButton singlePageBounceToggle = new ToggleButton("Single Page");
+
+  DatePicker startDatePicker = new DatePicker();
+  DatePicker endDatePicker = new DatePicker();
+
   private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
   ComboBox<String> metricDropdown = new ComboBox<>();
   /**
@@ -333,54 +337,83 @@ public class MainScreen {
     // Date pickers
     Label datePickerLabel = new Label("Date Range");
     HBox datePickerBox = new HBox();
-    DatePicker datePicker1 = new DatePicker();
-    datePicker1.setPrefSize(200.0, 35.0);
+    startDatePicker = new DatePicker();
+    startDatePicker.setPrefSize(200.0, 35.0);
     Label toLabel = new Label("to");
-    DatePicker datePicker2 = new DatePicker();
-    datePicker2.setPrefSize(200.0, 35.0);
-    datePickerBox.getChildren().addAll(datePicker1, toLabel, datePicker2);
+    endDatePicker = new DatePicker();
+    endDatePicker.setPrefSize(200.0, 35.0);
+    datePickerBox.getChildren().addAll(startDatePicker, toLabel, endDatePicker);
     datePickerBox.setPadding(new Insets(5, 0, 15, 0));
 
     // keeping the apply Filters button at bottom
     Button applyButton = new Button("Apply filters");
     applyButton.setPrefSize(133, 26);
-    applyButton.setOnAction(e -> {
-      Campaign selectedCampaign = getSelectedCampaign();
-      if (selectedCampaign != null) {
-        String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
-        String selectedMetric = metricDropdown.getValue();
-        String selectedGender = genderComboBox.getValue();
+    applyButton.setOnAction(
+        e -> {
+          Campaign selectedCampaign = getSelectedCampaign();
+          if (selectedCampaign != null) {
+          LocalDateTime startselectedDate = startDatePicker.getValue().atTime(00, 00, 00);
+          LocalDateTime endselectedDate = endDatePicker.getValue().atTime(23, 59, 59);
 
-        // Clearly determine granularity based on selected toggle
-        Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
-        String granularity;
+          if (startselectedDate.isAfter(endselectedDate)) {
+            showAlert(null, "calendardateswrongorder");
+          } else {
 
-        if (selectedToggle == hourToggle) {
-          granularity = "Hourly";
-        } else if (selectedToggle == dayToggle) {
-          granularity = "Daily";
-        } else if (selectedToggle == weekToggle) {
-          granularity = "Weekly";
-        } else {
-          granularity = "Daily"; // Default option clearly set here
-        }
+              String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
+              String selectedMetric = metricDropdown.getValue();
+              String selectedGender = genderComboBox.getValue();
+              String selectedAge = ageComboBox.getValue();
+              String selectedIncome = incomeComboBox.getValue();
+              String selectedContext = contextComboBox.getValue();
 
-        // Call generateGraph method with both granularity and gender filtering
-        controller.generateGraph(selectedCampaign.getName(), bounceType, selectedMetric, granularity, selectedGender);
+              // Clearly determine granularity based on selected toggle
+              Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
+              String granularity;
 
-        // Update the bounce rate calculation
-        controller.updateBounceRate(selectedCampaign.getName(), bounceType);
-      }
+              if (selectedToggle == hourToggle) {
+                granularity = "Hourly";
+              } else if (selectedToggle == dayToggle) {
+                granularity = "Daily";
+              } else if (selectedToggle == weekToggle) {
+                granularity = "Weekly";
+              } else {
+                granularity = "Daily"; // Default option clearly set here
+              }
 
-    });
+              // Call generateGraph method with both granularity and gender filtering
+              Map<String, String> filtersMap = new HashMap<>();
+              filtersMap.put("campaignName", selectedCampaign.getName());
+              filtersMap.put("selectedMetric", selectedMetric);
+              filtersMap.put("Gender", selectedGender);
+              filtersMap.put("Age", selectedAge);
+              filtersMap.put("Income", selectedIncome);
+              filtersMap.put("Context", selectedContext);
+              filtersMap.put("Granularity", granularity);
+              filtersMap.put("bounceDefinition", bounceType);
 
+
+              // Update the bounce rate calculation
+              controller.queryStatistics(filtersMap, startselectedDate, endselectedDate);
+              controller.updateBounceRate(selectedCampaign.getName(), bounceType);
+            }
+          }
+        });
 
     // Adding  content to panel
-    filtersPanel.getChildren().addAll( metricBox,
-            filterLabel, topfilterBox, bottomfilterBox,
-            timeGranularityLabel, timeGranularityToggleBox,
-            bounceDefinitionLabel, bounceDefinitionBox, datePickerLabel,
-            datePickerBox, applyButton);
+    filtersPanel
+        .getChildren()
+        .addAll(
+            metricBox,
+            filterLabel,
+            topfilterBox,
+            bottomfilterBox,
+            timeGranularityLabel,
+            timeGranularityToggleBox,
+            bounceDefinitionLabel,
+            bounceDefinitionBox,
+            datePickerLabel,
+            datePickerBox,
+            applyButton);
     filtersPanel.setAlignment(Pos.CENTER);
 
     return filtersPanel;
@@ -470,6 +503,10 @@ public class MainScreen {
       alert.setTitle("Error");
       alert.setHeaderText("Password invalid");
       alert.setContentText("Password is incorrect");
+    } else if (type.equals("calendardateswrongorder")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Dates wrong order");
+      alert.setContentText("The starting date must come before the ending date");
     } else {
       alert.setTitle("Error");
       alert.setHeaderText("Wrong format");
@@ -628,9 +665,15 @@ public class MainScreen {
     });
   }
 
-  public void setFirstGenerationFilters(){
+  public void setFirstGenerationFilters(LocalDateTime startdatetime, LocalDateTime enddatetime){
     metricDropdown.setValue("Impressions");
     pageleftBounceToggle.setSelected(true);
+
+    LocalDate startdate = startdatetime.toLocalDate();
+    LocalDate enddate = enddatetime.toLocalDate();
+
+    startDatePicker.setValue(startdate);
+    endDatePicker.setValue(enddate);
   }
 
   }

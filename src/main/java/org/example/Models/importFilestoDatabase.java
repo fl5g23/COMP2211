@@ -3,8 +3,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.Arrays;
-import java.util.List;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.*;
 
 
@@ -71,7 +72,7 @@ public class importFilestoDatabase {
     public void insertDataintoTables(String campaignName, String table, List<List<String>> data) {
         final String url = "jdbc:sqlite:mainData.db";
         final String sql;
-        final int BATCH_SIZE = 1_000;
+        final int BATCH_SIZE = 100_000;
         int numberProcessed = 0;
 
         // SQL Insert Statements for each table
@@ -91,12 +92,6 @@ public class importFilestoDatabase {
 
             conn.setAutoCommit(false);  // Enable transaction for performance
 
-            // For UserProfiles batch processing when importing Impressions
-//            PreparedStatement userProfileStmt = null;
-//            if (table.equals("Impressions")) {
-//                String userProfileSql = "INSERT OR REPLACE INTO UserProfiles (Campaign, ID, Gender, Age, Income, Context) VALUES (?, ?, ?, ?, ?, ?)";
-//                userProfileStmt = conn.prepareStatement(userProfileSql);
-//            }
 
             for (List<String> record : data) {
                 pstmt.setString(1, campaignName); // Set Campaign
@@ -104,12 +99,6 @@ public class importFilestoDatabase {
                 if (table.equals("Impressions")) {
                     importImpressions(record, pstmt);
                     pstmt.addBatch();
-
-                    // Add to UserProfiles batch with proper addBatch call
-//                    if (userProfileStmt != null) {
-//                        importUserProfile(campaignName, record, userProfileStmt);
-//                        userProfileStmt.addBatch(); // Add this line to ensure UserProfiles batch is created
-//                    }
                 } else if (table.equals("Server")) {
                     importServer(record, pstmt);
                     pstmt.addBatch();
@@ -123,107 +112,68 @@ public class importFilestoDatabase {
                 // Execute batch periodically
                 if (numberProcessed % BATCH_SIZE == 0) {
                     pstmt.executeBatch();
-//                    if (userProfileStmt != null) {
-//                        userProfileStmt.executeBatch();
-//                    }
-                    conn.commit(); // Commit changes
+//                    conn.commit(); // Commit changes
                 }
             }
 
-            // Ensure final batch is executed
+//             Ensure final batch is executed
             pstmt.executeBatch();
-//            if (userProfileStmt != null) {
-//                userProfileStmt.executeBatch();
-//                userProfileStmt.close();
-//            }
             conn.commit();
 
             System.out.println("Data inserted successfully into table: " + table);
-            if (table.equals("Impressions")) {
-                System.out.println("User profiles updated with demographic data");
-            }
 
         } catch (SQLException e) {
             throw new RuntimeException("Error while inserting data into the " + table + " table", e);
         }
     }
 
-    /**
-     * Populates the UserProfiles table from existing Impressions data
-     * Useful for retroactively building profiles after Impressions data is loaded
-     */
-    public void populateUserProfiles(String campaignName) {
-        final String url = "jdbc:sqlite:mainData.db";
-        final int BATCH_SIZE = 1_000;
+  public void insertDataUserProfiles(String campaignName, List<List<String>> data) {
+    final String url = "jdbc:sqlite:mainData.db";
+    final String sql =
+        "INSERT OR IGNORE INTO UserProfiles (Campaign, ID, Gender, Age, Income, Context) VALUES (?, ?, ?, ?, ?, ?)";
+    final int BATCH_SIZE = 100_000; // Increased batch size
+    int numberProcessed = 0;
 
-        try (Connection conn = DriverManager.getConnection(url)) {
-            conn.setAutoCommit(false);
+    // Create a HashSet just to track IDs we've seen - much lighter weight than storing whole
+    // records
+    Set<String> processedIds = new HashSet<>();
 
-            // First, retrieve unique user IDs with their demographic info
-            String selectSql =
-                    "SELECT DISTINCT Campaign, ID, Gender, Age, Income, Context " +
-                            "FROM Impressions " +
-                            "WHERE Campaign = ?";
+    try (Connection conn = DriverManager.getConnection(url);
+        PreparedStatement pstmt = conn.prepareStatement(sql)) {
+      conn.setAutoCommit(false);
+      for (List<String> record : data) {
+        String userId = record.get(1);
 
-            String insertSql =
-                    "INSERT OR REPLACE INTO UserProfiles (Campaign, ID, Gender, Age, Income, Context) " +
-                            "VALUES (?, ?, ?, ?, ?, ?)";
+        if (processedIds.add(
+            userId)) { // add returns true if the set did not already contain the ID
+          importUserProfiles(campaignName, record, pstmt, userId);
+          pstmt.addBatch();
+          numberProcessed++;
 
-            try (PreparedStatement selectStmt = conn.prepareStatement(selectSql);
-                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+          // Execute batch periodically
+          if (numberProcessed % BATCH_SIZE == 0) {
+            pstmt.executeBatch();
 
-                selectStmt.setString(1, campaignName);
-                ResultSet rs = selectStmt.executeQuery();
-
-                int count = 0;
-                while (rs.next()) {
-                    importUserProfileFromResultSet(rs, insertStmt);
-                    insertStmt.addBatch();
-
-                    count++;
-                    if (count % BATCH_SIZE == 0) {
-                        insertStmt.executeBatch();
-                        conn.commit();
-                    }
-                }
-
-                // Execute final batch
-                if (count % BATCH_SIZE != 0) {
-                    insertStmt.executeBatch();
-                    conn.commit();
-                }
-
-                System.out.println("UserProfiles populated with " + count + " records from campaign: " + campaignName);
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Error while populating UserProfiles table", e);
+          }
         }
+      }
+      pstmt.executeBatch();
+      conn.commit();
+      System.out.println("Total unique users inserted: " + numberProcessed);
+    } catch (SQLException e) {
+      throw new RuntimeException("Error while inserting data into the UserProfiles table", e);
     }
+  }
 
-    /**
-     * Helper method to import UserProfile data from Impressions record
-     */
-    private static void importUserProfile(String campaignName, List<String> record, PreparedStatement pstmt) throws SQLException {
+    private static void importUserProfiles(String campaignName, List<String> record, PreparedStatement pstmt, String userId) throws SQLException {
         pstmt.setString(1, campaignName);
-        pstmt.setLong(2, Long.parseLong(record.get(1))); // ID
+        pstmt.setLong(2, Long.parseLong(userId));
         pstmt.setString(3, record.get(2)); // Gender
         pstmt.setString(4, record.get(3)); // Age
         pstmt.setString(5, record.get(4)); // Income
         pstmt.setString(6, record.get(5)); // Context
     }
 
-    /**
-     * Helper method to import UserProfile data from a ResultSet
-     */
-    private static void importUserProfileFromResultSet(ResultSet rs, PreparedStatement pstmt) throws SQLException {
-        pstmt.setString(1, rs.getString("Campaign"));
-        pstmt.setLong(2, rs.getLong("ID"));
-        pstmt.setString(3, rs.getString("Gender"));
-        pstmt.setString(4, rs.getString("Age"));
-        pstmt.setString(5, rs.getString("Income"));
-        pstmt.setString(6, rs.getString("Context"));
-    }
 
     private static void importClicks(List<String> record, PreparedStatement pstmt) throws SQLException {
         pstmt.setString(2, record.get(0)); // Set Date
@@ -281,19 +231,36 @@ public class importFilestoDatabase {
     // New table for unique user profiles with demographic data
     String sqlcreateUserProfiles = "CREATE TABLE IF NOT EXISTS UserProfiles (\n" +
             "    Campaign TEXT, \n" +
-            "    ID BIGINT PRIMARY KEY, \n" +
+            "    ID BIGINT, \n" +
             "    Gender TEXT, \n" +
             "    Age TEXT, \n" +
             "    Income TEXT, \n" +
-            "    Context TEXT,\n" +
-            "    UNIQUE(Campaign, ID)\n" +
+            "    Context TEXT\n" +
             ");";
 
     public static void main (String[] args){
         importFilestoDatabase object = new importFilestoDatabase();
         object.createDataTables();
         var hi = object.getCSVData("src/main/resources/testCSV/impression_log2month.csv"); //change to any of the other ones
-        object.insertDataintoTables("ss","Impressions",hi);
+
+
+
+
+        LocalTime userStart = LocalTime.now();
+        object.insertDataUserProfiles("Try6", hi);
+        LocalTime userEnd = LocalTime.now();
+
+
+        LocalTime start = LocalTime.now();
+        object.insertDataintoTables("Try6", "Impressions", hi);
+        LocalTime end = LocalTime.now();
+
+        System.out.println("Impressions time: " + start.until(end, ChronoUnit.SECONDS));
+        System.out.println("User profiles time: " + userStart.until(userEnd, ChronoUnit.SECONDS));
+
+
+
+
 
         // Populate user profiles from existing impression data if needed
         // object.populateUserProfiles("LOL");

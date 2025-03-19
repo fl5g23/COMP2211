@@ -4,6 +4,8 @@ import org.example.Models.Auth;
 import org.example.Models.Campaign;
 import org.example.Models.StatsCalculator;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -94,8 +96,8 @@ public class DataController {
     /**
      * Gets metrics over time for a campaign.
      */
-    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String timeGranularity, String selectedMetric) {
-        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender, timeGranularity, selectedMetric);
+    public Map<String, Map<String, Integer>> getMetricsOverTime(Map<String, String> filterSettings) {
+        return statsCalculator.getMetricsOverTime(filterSettings);
     }
 
     /**
@@ -153,5 +155,13 @@ public class DataController {
 
     public void closeAppActions(){
         statsCalculator.closeAppActions();
+    }
+
+    public void primeForQueries(ArrayList<String> sqlStatements){
+        statsCalculator.primeForQueries(sqlStatements);
+    }
+
+    public void resetFiltersSQL(){
+        statsCalculator.resetFiltersSQL();
     }
 }

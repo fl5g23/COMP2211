@@ -2,10 +2,14 @@ package org.example.Models;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.sql.*;
 
 public class StatsCalculator {
+  String impressionsFilterSQL = "";
+  String clicksFilterSQL = "";
+  String serverFilterSQL = "";
 
   importFilestoDatabase importer = new importFilestoDatabase();
 
@@ -21,6 +25,19 @@ public class StatsCalculator {
     importer.insertDataintoTables(campaign.getName(), "Impressions", impressionData);
     importer.insertDataintoTables(campaign.getName(), "Clicks", clickData);
     importer.insertDataintoTables(campaign.getName(), "Server", serverData);
+    importer.insertDataUserProfiles(campaign.getName(), impressionData);
+  }
+
+  public void primeForQueries(ArrayList<String> sqlStatements){
+    impressionsFilterSQL = sqlStatements.getFirst();
+    clicksFilterSQL = sqlStatements.get(1);
+    serverFilterSQL = sqlStatements.getLast();
+  }
+
+  public void resetFiltersSQL(){
+    impressionsFilterSQL = "";
+    clicksFilterSQL = "";
+    serverFilterSQL = "";
   }
 
 
@@ -35,12 +52,11 @@ public class StatsCalculator {
   public Map<String, Double> getCoreMetrics(String campaignname) {
     Map<String, Double> coreMetrics = new HashMap<>();
 
-    // SQL query with placeholders
     String coreMetricsSQL =
-            "SELECT COUNT(*) FROM impressions WHERE Campaign = ? UNION ALL " +
-                    "SELECT COUNT(*) FROM clicks WHERE Campaign = ? UNION ALL " +
-                    "SELECT COUNT(DISTINCT ID) FROM clicks WHERE Campaign = ? UNION ALL " +
-                    "SELECT COUNT(*) FROM server WHERE conversion = 'Yes' AND Campaign = ?";
+            "SELECT COUNT(*) FROM impressions WHERE Campaign = ? " + impressionsFilterSQL + " UNION ALL " +
+                    "SELECT COUNT(*) FROM clicks c JOIN UserProfiles u ON c.id= u.id WHERE u.Campaign = ? " + clicksFilterSQL + " UNION ALL " +
+                    "SELECT COUNT(DISTINCT c.ID) FROM clicks c JOIN UserProfiles u ON c.id= u.id WHERE u.Campaign = ? " + clicksFilterSQL + " UNION ALL " +
+                    "SELECT COUNT(*) FROM server s JOIN UserProfiles u ON s.id = u.id WHERE conversion = 'Yes' AND u.Campaign = ? " + serverFilterSQL;
 
     // Create a list of parameters to bind to the SQL query
     List<String> parameters = Arrays.asList(campaignname, campaignname, campaignname, campaignname);
@@ -81,9 +97,10 @@ public class StatsCalculator {
     double totalClickCost = 0;
     double totalCost = 0;
 
+
     // SQL queries to get total costs
-    String totalImpressionsSQL = "SELECT SUM(impression_cost) FROM impressions WHERE Campaign = ?";
-    String totalClicksSQL = "SELECT SUM(click_cost) FROM clicks WHERE Campaign = ?";
+    String totalImpressionsSQL = "SELECT SUM(impression_cost) FROM impressions WHERE Campaign = ?" + impressionsFilterSQL;
+    String totalClicksSQL = "SELECT SUM(click_cost) FROM clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?" + clicksFilterSQL;
 
     // Create a list of parameters to bind to the SQL queries
     List<String> parameters = Arrays.asList(campaignname);
@@ -123,10 +140,10 @@ public class StatsCalculator {
     // SQL query updated to use campaignname as a parameter
     String clickThroughRateSQL =
             "SELECT CASE "
-                    + "    WHEN (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = ?) = 0 "
+                    + "    WHEN (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = ?"+impressionsFilterSQL+") = 0 "
                     + "    THEN 0  "
-                    + "    ELSE (SELECT COUNT(Click_Cost) FROM Clicks WHERE Campaign = ?) * 1.0 / "
-                    + "         (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = ?) "
+                    + "    ELSE (SELECT COUNT(Click_Cost) FROM Clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?"+clicksFilterSQL+") * 1.0 / "
+                    + "         (SELECT COUNT(Impression_Cost) FROM Impressions WHERE Campaign = ?"+impressionsFilterSQL+") "
                     + "END AS CTR";
 
     // Create a list of parameters to bind to the SQL query
@@ -156,7 +173,7 @@ public class StatsCalculator {
     double costPerClick = 0;
 
     // Updated SQL query to use campaignname as a parameter
-    String cpcSQL = "SELECT SUM(click_cost) / NULLIF(COUNT(click_cost), 0) FROM clicks WHERE Campaign = ?";
+    String cpcSQL = "SELECT SUM(click_cost) / NULLIF(COUNT(click_cost), 0) FROM clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?"+clicksFilterSQL;
 
     try {
       // Execute SQL query with the campaignname parameter
@@ -184,9 +201,9 @@ public class StatsCalculator {
     // Updated SQL query to use campaignname as a parameter
     String cpaSQL =
             "SELECT \n"
-                    + "    ( (SELECT SUM(Impression_Cost) FROM Impressions WHERE Campaign = ?) + \n"
-                    + "      (SELECT SUM(Click_Cost) FROM Clicks WHERE Campaign = ?) ) / \n"
-                    + "    NULLIF((SELECT COUNT(*) FROM Server WHERE Conversion = 'Yes' AND Campaign = ?), 0) \n"
+                    + "    ( (SELECT SUM(Impression_Cost) FROM Impressions WHERE Campaign = ?"+impressionsFilterSQL+") + \n"
+                    + "      (SELECT SUM(Click_Cost) FROM Clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?"+clicksFilterSQL+") ) / \n"
+                    + "    NULLIF((SELECT COUNT(*) FROM Server s JOIN UserProfiles u ON s.id = u.id WHERE s.Conversion = 'Yes' AND u.Campaign = ?"+serverFilterSQL+"), 0) \n"
                     + "    AS CPA;";
 
     try {
@@ -213,9 +230,9 @@ public class StatsCalculator {
     double CPM = 0;
 
     // Updated SQL query to use campaignname as a parameter
-    String cpmSQL = "SELECT ( (SELECT SUM(impression_cost) FROM Impressions WHERE Campaign = ?) + " +
-            " (SELECT SUM(click_cost) FROM Clicks WHERE Campaign = ?) ) * 1000 / " +
-            " (SELECT COUNT(*) FROM Impressions WHERE Campaign = ?);";
+    String cpmSQL = "SELECT ( (SELECT SUM(impression_cost) FROM Impressions WHERE Campaign = ? "+impressionsFilterSQL+") + " +
+            " (SELECT SUM(click_cost) FROM Clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?"+clicksFilterSQL+") ) * 1000 / " +
+            " (SELECT COUNT(*) FROM Impressions WHERE Campaign = ?"+impressionsFilterSQL+");";
 
     try {
       // Execute SQL query with the campaignname parameter
@@ -249,9 +266,9 @@ public class StatsCalculator {
     Map<String, Double> bouncesMap = new HashMap<>();
 
     // Updated SQL queries to use campaignname as a parameter
-    String singlePageBouncesSQL = "SELECT COUNT(*) FROM Server WHERE Pages_Viewed = 1 AND Campaign = ?";
-    String timeSpentSQL = "SELECT COUNT(*) FROM Server WHERE Exit_Date != 'n/a' AND Conversion = 'No' AND Campaign = ?";
-    String totalClicksSQL = "SELECT COUNT(click_cost) FROM Clicks WHERE Campaign = ?";
+    String singlePageBouncesSQL = "SELECT COUNT(*) FROM Server s JOIN UserProfiles u ON s.id = u.id WHERE s.Pages_Viewed = 1 AND u.Campaign = ? "+ serverFilterSQL;
+    String timeSpentSQL = "SELECT COUNT(*) FROM Server s JOIN UserProfiles u ON s.id = u.id WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND u.Campaign = ?" + serverFilterSQL;
+    String totalClicksSQL = "SELECT COUNT(click_cost) FROM Clicks c JOIN UserProfiles u ON c.id = u.id WHERE u.Campaign = ?"+clicksFilterSQL;
 
     try {
       // Execute SQL queries with the campaignname parameter
@@ -361,11 +378,17 @@ public class StatsCalculator {
     return false; // Default to false if something goes wrong
   }
   //daily
-  public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String timeGranularity, String selectedMetric) {
+  public Map<String, Map<String, Integer>> getMetricsOverTime(Map<String, String> filterSettings) {
 
     Map<String, Map<String, Integer>> metrics = new TreeMap<>();
 
     String sql = "";
+    String campaignName = filterSettings.get("campaignName");
+    String selectedGender = filterSettings.get("Gender");
+    String timeGranularity = filterSettings.get("Granularity");
+    String selectedMetric = filterSettings.get("selectedMetric");
+    String bounceType = filterSettings.get("bounceDefinition");
+
 
     // Validate and normalize inputs
     if (selectedGender == null || selectedGender.isEmpty()) {
@@ -391,33 +414,33 @@ public class StatsCalculator {
         break;
       case "weekly":
         // Weekly requires special handling
-        return getMetricsWeekly(campaignName, bounceType, selectedGender, selectedMetric);
+        return getMetricsWeekly(filterSettings);
       default:
         timeFormat = "%Y-%m-%d"; // Default to daily if something goes wrong
     }
 
     switch (selectedMetric) {
       case "Impressions":
-        sql = "SELECT strftime('" + timeFormat + "', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?" + impressionsFilterSQL;
         break;
 
       case "Clicks":
-        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?"+clicksFilterSQL;
         break;
 
       case "Uniques":
-        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN Impressions i ON c.ID = i.ID WHERE i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?"+clicksFilterSQL;
         break;
 
       case "Conversions":
-        sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Conversion = 'Yes' AND i.Campaign = ?";
+        sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Conversion = 'Yes' AND u.Campaign = ?"+serverFilterSQL;
         break;
 
       case "Bounces":
         if (bounceType.equals("SinglePage")) {
-          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Pages_Viewed = 1 AND i.Campaign = ?";
+          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Pages_Viewed = 1 AND u.Campaign = ?"+serverFilterSQL;
         } else if (bounceType.equals("PageLeft")) {
-          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN Impressions i ON s.ID = i.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND i.Campaign = ?";
+          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND u.Campaign = ?"+serverFilterSQL;
         } else {
           throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
         }
@@ -426,19 +449,24 @@ public class StatsCalculator {
     // Setup parameters
     List<String> parameters = new ArrayList<>();
     parameters.add(campaignName);
+//
+//    parameters.add(startdate.toString().replace("T", " "));
+//    parameters.add(enddate.toString().replace("T", " "));
+//
+//    // Apply gender filtering if needed
+//    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
+//      sql += " AND Gender = ?";
+//      parameters.add(selectedGender);
+//
+//    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
+//      String genderCondition = " AND i.Gender = ?";
+//
+//      sql += genderCondition;
+//
+//      parameters.add(selectedGender);
+//    }
 
-    // Apply gender filtering if needed
-    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
-      sql += " AND Gender = ?";
-      parameters.add(selectedGender);
 
-    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
-      String genderCondition = " AND i.Gender = ?";
-
-      sql += genderCondition;
-
-      parameters.add(selectedGender);
-    }
     // Group by time
     sql += " GROUP BY Time";
 
@@ -453,22 +481,22 @@ public class StatsCalculator {
   }
 
   // Keep this method separate for weekly metrics since it requires more complex date calculations
-  public Map<String, Map<String, Integer>> getMetricsWeekly(String campaignName, String bounceType, String selectedGender, String selectedMetric) {
+  public Map<String, Map<String, Integer>> getMetricsWeekly(Map<String, String> filterSettings) {
 
     String sql = "";
-
+    String campaignName = filterSettings.get("campaignName");
+    String selectedMetric = filterSettings.get("selectedMetric");
+    String bounceType = filterSettings.get("bounceDefinition");
     String bounceCondition;
 
-    if (selectedGender == null || selectedGender.isEmpty()) {
-      selectedGender = "All";
-    }
 
-    LocalDate campaignStart = getCampaignStartDate(campaignName);
+
+    LocalDateTime campaignStart = getCampaignStartDate(campaignName);
     if (campaignStart == null) {
       throw new IllegalStateException("Campaign start date not found for " + campaignName);
     }
 
-    LocalDate campaignEnd = getCampaignEndDate(campaignName);
+    LocalDateTime campaignEnd = getCampaignEndDate(campaignName);
     if (campaignEnd == null) {
       throw new IllegalStateException("Campaign end date not found for " + campaignName);
     }
@@ -481,25 +509,25 @@ public class StatsCalculator {
       case "Impressions":
         sql = "SELECT DATE(?, '+' || (CAST((julianday(Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
                 "FROM Impressions " +
-                "WHERE Campaign = ? AND Date BETWEEN ? AND ?";
+                "WHERE Campaign = ?" +impressionsFilterSQL;
         break;
 
       case "Clicks":
         sql = "SELECT DATE(?, '+' || (CAST((julianday(c.Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
-                "FROM Clicks c JOIN Impressions i ON c.ID = i.ID " +
-                "WHERE i.Campaign = ? AND c.Date BETWEEN ? AND ?";
+                "FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID " +
+                "WHERE u.Campaign = ?"+clicksFilterSQL;
         break;
 
       case "Uniques":
         sql = "SELECT DATE(?, '+' || (CAST((julianday(c.Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(DISTINCT c.ID) " +
-                "FROM Clicks c JOIN Impressions i ON c.ID = i.ID " +
-                "WHERE i.Campaign = ? AND c.Date BETWEEN ? AND ?";
+                "FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID " +
+                "WHERE u.Campaign = ?"+clicksFilterSQL;
         break;
 
       case "Conversions":
         sql = "SELECT DATE(?, '+' || (CAST((julianday(s.Entry_Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
-                "FROM Server s JOIN Impressions i ON s.ID = i.ID " +
-                "WHERE s.Conversion = 'Yes' AND i.Campaign = ? AND s.Entry_Date BETWEEN ? AND ?";
+                "FROM Server s JOIN UserProfiles u ON s.ID = u.ID " +
+                "WHERE s.Conversion = 'Yes' AND u.Campaign = ?" +serverFilterSQL;
         break;
 
       case "Bounces":
@@ -511,27 +539,44 @@ public class StatsCalculator {
           throw new IllegalArgumentException("Invalid bounce type: " + bounceType);
         }
         sql = "SELECT DATE(?, '+' || (CAST((julianday(s.Entry_Date) - julianday(?)) / 7 AS INT) * 7) || ' days') AS WeekStart, COUNT(*) " +
-                "FROM Server s JOIN Impressions i ON s.ID = i.ID " +
-                "WHERE " + bounceCondition + " AND i.Campaign = ? AND s.Entry_Date BETWEEN ? AND ?";
+                "FROM Server s JOIN UserProfiles u ON s.ID = u.ID " +
+                "WHERE " + bounceCondition + " AND u.Campaign = ?" + serverFilterSQL;
     }
+
+
+
+
 
     List<String> impParams = new ArrayList<>();
-    impParams.add(campaignStart.toString());
-    impParams.add(campaignStart.toString());
+    String campaignStartParsed = campaignStart.toString().replace("T", " ");
+//    String rangeStartDateParsed = rangeStartDate.toString().replace("T", " ");
+//    String rangeEndDateParsed = rangeEndDate.toString().replace("T", " ");
+
+    impParams.add(campaignStartParsed);
+    impParams.add(campaignStartParsed);
     impParams.add(campaignName);
-    impParams.add(campaignStart.toString());
-    impParams.add(campaignEnd.toString());
+
+//    impParams.add(campaignStart.toString());
+//    impParams.add(campaignEnd.toString());
 
     // Apply gender filtering if needed
-    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
-      sql += " AND Gender = ?";
-    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
-      String genderCondition = " AND i.Gender = ?";
+//    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
+//      sql += " AND Gender = ?";
+//    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
+//      String genderCondition = " AND i.Gender = ?";
 
-      sql += genderCondition;
-
-      impParams.add(selectedGender);
-    }
+//    // Apply gender filtering if needed
+//    if (!selectedGender.equalsIgnoreCase("All") && selectedMetric.equals("Impressions")) {
+//      sql += " AND Gender = ?";
+//      impParams.add(selectedGender);
+//
+//    }else if (!selectedMetric.equals("Impressions") && !selectedGender.equals("All")){
+//      String genderCondition = " AND i.Gender = ?";
+//
+//      sql += genderCondition;
+//
+//      impParams.add(selectedGender);
+//    }
 
     sql += " GROUP BY WeekStart";
 
@@ -544,25 +589,27 @@ public class StatsCalculator {
     return weeklyMetrics;
   }
 
-  public LocalDate getCampaignStartDate(String campaignName) {
+  public LocalDateTime getCampaignStartDate(String campaignName) {
     String sql = "SELECT MIN(Date) FROM Impressions WHERE Campaign = ?";
-    LocalDate startDate = null;
+    LocalDateTime endDate = null;
     try (ResultSet rs = executeSQL(sql, List.of(campaignName))) {
       if (rs != null && rs.next()) {
-        startDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+        LocalDate startDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+        endDate = startDate.atTime(00, 00, 00);
       }
     } catch (SQLException e) {
       e.printStackTrace();
     }
-    return startDate;
+    return endDate;
   }
 
-  public LocalDate getCampaignEndDate(String campaignName) {
+  public LocalDateTime getCampaignEndDate(String campaignName) {
     String sql = "SELECT MAX(Date) FROM Impressions WHERE Campaign = ?";
-    LocalDate endDate = null;
+    LocalDateTime endDate = null;
     try (ResultSet rs = executeSQL(sql, List.of(campaignName))) {
       if (rs != null && rs.next()) {
-        endDate = LocalDate.parse(rs.getString(1).substring(0, 10));
+        LocalDate date = LocalDate.parse(rs.getString(1).substring(0, 10));
+        endDate = date.atTime(23, 59, 59);
       }
     } catch (SQLException e) {
       e.printStackTrace();
