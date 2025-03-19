@@ -94,14 +94,8 @@ public class DataController {
     /**
      * Gets metrics over time for a campaign.
      */
-    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender) {
-        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender);
-    }
-    public Map<String, Map<String, Integer>> getMetricsWeekly(String campaignName, String bounceType, String selectedGender) {
-        return statsCalculator.getMetricsWeekly( campaignName,  bounceType,  selectedGender);
-    }
-    public Map<String, Map<String, Integer>> getMetricsHourly(String campaignName, String bounceType, String selectedGender) {
-        return statsCalculator.getMetricsHourly(campaignName, bounceType,selectedGender);
+    public Map<String, Map<String, Integer>> getMetricsOverTime(String campaignName, String bounceType, String selectedGender, String timeGranularity, String selectedMetric) {
+        return statsCalculator.getMetricsOverTime(campaignName, bounceType, selectedGender, timeGranularity, selectedMetric);
     }
 
     /**

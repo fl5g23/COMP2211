@@ -37,6 +37,7 @@ public class MainScreen {
   private boolean isDataDownloaded = false; // Track if data is available for histograms
   private UIController controller; // Reference to the controller
   Boolean firstGraphGeneration = true; //solves bug with chart generation
+  String lastGranularity = "";
 
   // Core metric labels
   Label keyMetricsTitle = new Label("Key Metrics:");
@@ -550,12 +551,20 @@ public class MainScreen {
   /**
    * Update the performance graph with new data
    */
-  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric) {
+  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric, String granularity) {
     System.out.println("Data received in UI: " + metricsOverTime);
+
+//    if (!lastGranularity.equals(granularity)){
+//      lineChart.setAnimated(false);
+//      lastGranularity = granularity;
+//    }else{
+//      lineChart.setAnimated(true);
+//    }
 
     if (!firstGraphGeneration){
       lineChart.setAnimated(true);
     }
+
     lineChart.getData().clear();
 
     if (!metricsOverTime.containsKey(selectedMetric)) {
@@ -619,4 +628,9 @@ public class MainScreen {
     });
   }
 
-}
+  public void setFirstGenerationFilters(){
+    metricDropdown.setValue("Impressions");
+    pageleftBounceToggle.setSelected(true);
+  }
+
+  }

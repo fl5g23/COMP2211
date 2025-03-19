@@ -126,6 +126,8 @@ public class UIController {
             updateStatistics(campaign.getName());
 
             generateGraph(campaign.getName(), "PageLeft","Impressions","Daily","All");
+            mainScreen.setFirstGenerationFilters();
+
 }}
 
 
@@ -180,29 +182,9 @@ public class UIController {
   public void generateGraph(String campaignName, String bounceType, String selectedMetric, String granularity, String selectedGender) {
     Map<String, Map<String, Integer>> metricsOverTime;
 
-    switch (granularity) {
-      case "Hourly":
-        metricsOverTime = dataController.getMetricsHourly(campaignName, bounceType, selectedGender);
-        System.out.println("hourly data fetched: " + metricsOverTime);  // Debug
-        break;
+    metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType, selectedGender, granularity, selectedMetric);
 
-      case "Daily":
-        metricsOverTime = dataController.getMetricsOverTime(campaignName, bounceType, selectedGender);
-        System.out.println("daily data fetched: " + metricsOverTime);  // Debug
-        break;
-
-      case "Weekly": {
-        Map<String, Map<String, Integer>> weeklyMetrics = dataController.getMetricsWeekly(campaignName, bounceType, selectedGender);
-        metricsOverTime = weeklyMetrics;
-        System.out.println("weekly data fetched: " + metricsOverTime);  // Debug
-        break;
-      }
-
-      default:
-        throw new IllegalArgumentException("Unknown granularity: " + granularity);
-    }
-
-    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric);
+    mainScreen.updatePerformanceGraph(metricsOverTime, selectedMetric, granularity);
   }
 //
 
