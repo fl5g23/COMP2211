@@ -2,9 +2,14 @@ package org.example.Views;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.*;
 
 import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -13,16 +18,23 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.io.File;
 
+import javax.imageio.ImageIO;
 import org.example.Models.Campaign;
 import org.example.Models.ClickCostHistogram;
 import org.example.Controllers.UIController;
 import org.jfree.chart.ChartPanel;
 import javafx.embed.swing.SwingNode;
+import org.jfree.chart.ChartUtils;
+import org.jfree.chart.JFreeChart;
 
 public class MainScreen {
 
@@ -72,6 +84,8 @@ public class MainScreen {
 
   private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
   ComboBox<String> metricDropdown = new ComboBox<>();
+  private JFreeChart currentHistogramChart;
+
   /**
    * Constructor that accepts the controller
    */
@@ -109,6 +123,7 @@ public class MainScreen {
 
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
+
 
     Button authoriseUsersButton = new Button("Authorise Users");
     authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
@@ -201,7 +216,13 @@ public class MainScreen {
 
     VBox centerPanel = new VBox(chartContainer);
     centerPanel.setPrefSize(600, 400);
-
+    exportButton.setOnAction(e -> {
+      if (lineChart.isVisible()) {
+        exportChartWithDialog(lineChart);  // Export JavaFX LineChart
+      } else {
+        exportHistogramAsImage();  // Export JFreeChart Histogram
+      }
+    });
     // Layout
     BorderPane root = new BorderPane();
     root.setTop(topBar);
@@ -649,7 +670,9 @@ public class MainScreen {
    * Update the histogram for click costs
    */
   public void updateClickCostHistogram(List<Double> clickCosts) {
-    ChartPanel newHistogramPanel = new ChartPanel(new ClickCostHistogram(clickCosts).createHistogram());
+    ClickCostHistogram histogram = new ClickCostHistogram(clickCosts);
+    currentHistogramChart = histogram.getChart();  // ✅ Store for exporting
+    ChartPanel newHistogramPanel = new ChartPanel(currentHistogramChart);
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
   }
 
@@ -657,9 +680,13 @@ public class MainScreen {
    * Update the histogram for click times
    */
   public void updateClickTimeHistogram(Map<String, Integer> clicksByDate) {
-    ChartPanel newHistogramPanel = new ChartPanel(new ClickCostHistogram(clicksByDate).createHistogram());
+    ClickCostHistogram histogram = new ClickCostHistogram(clicksByDate);
+    currentHistogramChart = histogram.getChart();  //  Store for exporting
+    ChartPanel newHistogramPanel = new ChartPanel(currentHistogramChart);
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
   }
+
+
 
   // Add this to your main application class where you set up the primary stage
   private void setupCloseHandler(Stage primaryStage) {
@@ -679,4 +706,73 @@ public class MainScreen {
     endDatePicker.setValue(enddate);
   }
 
+
+  public void exportChartWithDialog(LineChart<String, Number> chart) {
+    // Open FileChooser Dialog
+    FileChooser fileChooser = new FileChooser();
+    fileChooser.setTitle("Save Chart As Image");
+
+    // Add file format options
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image", "*.png"));
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JPEG Image", "*.jpg"));
+
+    // Show Save Dialog
+    File file = fileChooser.showSaveDialog(null);
+
+    if (file != null) {
+      saveChartAsImage(chart, file);
+    }
   }
+
+  // Helper function to save the chart as an image
+  private void saveChartAsImage(LineChart<String, Number> chart, File file) {
+    WritableImage image = chart.snapshot(null, null);
+    BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+
+    // Detect file format
+    String fileName = file.getName().toLowerCase();
+    String format = fileName.endsWith(".jpg") ? "jpg" : "png";
+
+    // If saving as JPG, remove transparency by drawing on a white background
+    if (format.equals("jpg")) {
+      BufferedImage whiteBackgroundImage = new BufferedImage(
+          bufferedImage.getWidth(), bufferedImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+      Graphics2D g2d = whiteBackgroundImage.createGraphics();
+      g2d.setColor(Color.WHITE);  // Set background color to white
+      g2d.fillRect(0, 0, whiteBackgroundImage.getWidth(), whiteBackgroundImage.getHeight());
+      g2d.drawImage(bufferedImage, 0, 0, null);
+      g2d.dispose();
+
+      bufferedImage = whiteBackgroundImage;  // Use the new image
+    }
+
+    try {
+      ImageIO.write(bufferedImage, format, file);
+      System.out.println("Chart saved as: " + file.getAbsolutePath());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  public void exportHistogramAsImage() {
+    if (currentHistogramChart == null) {
+      System.out.println(" No histogram available to export.");
+      return;
+    }
+
+    FileChooser fileChooser = new FileChooser();
+    fileChooser.setTitle("Save Histogram As Image");
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image", "*.png"));
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JPEG Image", "*.jpg"));
+
+    File file = fileChooser.showSaveDialog(null);
+    if (file != null) {
+      try {
+        ChartUtils.saveChartAsPNG(file, currentHistogramChart, 800, 600);
+        System.out.println("Histogram saved as: " + file.getAbsolutePath());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+}

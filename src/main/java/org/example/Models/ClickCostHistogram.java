@@ -19,23 +19,28 @@ public class ClickCostHistogram {
   private List<Double> clickCosts;
   private Map<String, Integer> clicksByDate;
   private boolean isClickByCost;
-
-  // ✅ Constructor for Click Cost Histogram
+  private JFreeChart chart;
+  // Constructor for Click Cost Histogram
   public ClickCostHistogram(List<Double> clickCosts) {
     this.clickCosts = clickCosts;
     this.isClickByCost = true;
+    this.chart = createHistogram();
+
   }
   public ClickCostHistogram() {
     this.isClickByCost = true;
   }
 
-  // ✅ Constructor for Clicks Over Time Histogram (Grouped by Day)
   public ClickCostHistogram(Map<String, Integer> clicksByDate) {
     this.clicksByDate = clicksByDate;
     this.isClickByCost = false;
+    this.chart = createHistogram();
   }
 
-  // ✅ Create Histogram Based on Selected Type
+  public JFreeChart getChart() {
+    return chart;
+  }
+  //Create Histogram Based on Selected Type
   public JFreeChart createHistogram() {
     if (isClickByCost) {
       return createClickCostHistogram();
@@ -44,7 +49,7 @@ public class ClickCostHistogram {
     }
   }
 
-  // ✅ Click Cost Histogram (Bins Click Costs)
+  // click Cost Histogram
   private JFreeChart createClickCostHistogram() {
     HistogramDataset dataset = new HistogramDataset();
     dataset.setType(HistogramType.FREQUENCY);
@@ -69,16 +74,16 @@ public class ClickCostHistogram {
 
 
   private JFreeChart createClicksOverTimeHistogram() {
-    DefaultCategoryDataset dataset = new DefaultCategoryDataset(); // ✅ Use a category dataset
+    DefaultCategoryDataset dataset = new DefaultCategoryDataset(); //  Use a category dataset
 
     if (clicksByDate != null && !clicksByDate.isEmpty()) {
       List<String> sortedDates = new ArrayList<>(clicksByDate.keySet());
-      Collections.sort(sortedDates); // ✅ Ensure chronological order
+      Collections.sort(sortedDates); // Ensure chronological order
 
       int dayIndex = 1; // Start counting days from 1
       for (String date : sortedDates) {
-        int clickCount = clicksByDate.get(date); // ✅ Get the actual click count
-        dataset.addValue(clickCount, "Clicks", "Day " + dayIndex); // ✅ Add "Day X" as category
+        int clickCount = clicksByDate.get(date); //  Get the actual click count
+        dataset.addValue(clickCount, "Clicks", "Day " + dayIndex);
         dayIndex++; // Move to next day
       }
     }
@@ -87,26 +92,23 @@ public class ClickCostHistogram {
         "Clicks Over Time", // Chart title
         "Day", // X-axis label
         "Clicks", // Y-axis label
-        dataset // ✅ Use category dataset
+        dataset
     );
 
-    // ✅ Improve visualization (optional)
     CategoryPlot plot = (CategoryPlot) chart.getPlot();
     BarRenderer renderer = (BarRenderer) plot.getRenderer();
-    renderer.setSeriesPaint(0, new java.awt.Color(255, 102, 102)); // Red bars
+    renderer.setSeriesPaint(0, new java.awt.Color(255, 102, 102));
 
     return chart;
   }
 
-  // ✅ Blank Histogram (For Initial Display)
+  // Blank Histogram (For Initial Display)
   public JFreeChart createBlankHistogram() {
-    // Create a dataset with a dummy value (e.g., 0.0) to avoid the IllegalArgumentException
     HistogramDataset dataset = new HistogramDataset();
 
-    // Use a dummy value (e.g., 0.0) to ensure the dataset is not empty
+    // Use a dummy values to ensure the dataset is not empty
     dataset.addSeries("Click Costs", new double[]{0.0}, 1);
 
-    // Create and return a histogram chart with the dummy dataset
     return ChartFactory.createHistogram(
         "Click Cost",
         "",
@@ -118,4 +120,6 @@ public class ClickCostHistogram {
         false
     );
   }
+
+
 }
