@@ -219,9 +219,6 @@ public class UIController {
     }
 
     dataController.primeForQueries(sqlStatements);
-    String campaignName = filtersMap.get("campaignName");
-    updateStatistics(campaignName);
-    generateGraph(filtersMap);
   }
 
     /**
@@ -239,6 +236,7 @@ public class UIController {
         }
         mainScreen.updateBounceRateDisplay(bounceRate);
     }
+
 
 
 
@@ -365,6 +363,7 @@ public class UIController {
     public void closeAppActions(){
         dataController.closeAppActions();
     }
+
 
 
 

@@ -6,6 +6,12 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.Controllers.UIController;
+import org.example.Models.Campaign;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CompareGraphsView{
     private Stage primaryStage;
@@ -13,11 +19,19 @@ public class CompareGraphsView{
     private ComboBox<String> metricDropdown;
     private ComboBox<String> genderComboBox1, ageComboBox1, incomeComboBox1, contextComboBox1;
     private ComboBox<String> genderComboBox2, ageComboBox2, incomeComboBox2, contextComboBox2;
-    private DatePicker datePicker1, datePicker2, datePicker3, datePicker4;
+    private DatePicker startDatePickerLeft, endDatePickerLeft, startDatePickerRight, endDatePickerRight;
+    private ToggleButton hourToggleLeft, hourToggleRight, dayToggleLeft, dayToggleRight, weekToggleLeft, weekToggleRight, pageleftBounceToggleLeft, pageleftBounceToggleRight, singlePageBounceToggleLeft, singlePageBounceToggleRight;
+    private ToggleGroup bounceDefinitionGroupLeft, bounceDefinitionGroupRight, timeGranularityGroupLeft, timeGranularityGroupRight;
+    private LocalDate startDate, endDate;
+    private Campaign campaign;
 
-    public CompareGraphsView(Stage primaryStage, UIController uiController){
+
+    public CompareGraphsView(Stage primaryStage, UIController uiController, DatePicker startDate, DatePicker endDate, Campaign campaign){
         this.primaryStage = primaryStage;
         this.uiController = uiController;
+        this.startDate = startDate.getValue();
+        this.endDate = endDate.getValue();
+        this.campaign = campaign;
     }
 
     public void show(){
@@ -36,8 +50,8 @@ public class CompareGraphsView{
     metricBox.getChildren().addAll(metricLabel, metricDropdown);
     metricBox.setSpacing(5);
 
-    VBox graph1Filters = createFiltersBox("Choose Filters for Graph 1:", true);
-    VBox graph2Filters = createFiltersBox("Choose Filters for Graph 2:", false);
+    VBox graph1Filters = createFiltersPanel("Choose Filters for Graph 1:", startDate,endDate,true);
+    VBox graph2Filters = createFiltersPanel("Choose Filters for Graph 2:", startDate, endDate,false);
 
     Button compareButton = new Button("Compare");
     compareButton.setOnAction(e -> handleCompareButton(stage));
@@ -55,71 +69,220 @@ public class CompareGraphsView{
     stage.show();
     }
 
-    private VBox createFiltersBox(String title, boolean isGraph){
-        Label filterTitle = new Label(title);
 
-        ComboBox<String> genderBox = new ComboBox<>();
-        genderBox.getItems().addAll("Male", "Female");
-        genderBox.setPromptText("Gender");
+  private VBox createFiltersPanel(String title, LocalDate startDate, LocalDate endDate, Boolean isLeftGraph) {
+    VBox filtersPanel = new VBox();
+    filtersPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    filtersPanel.setPrefSize(300, 500);
 
-        ComboBox<String> ageBox = new ComboBox<>();
-        ageBox.getItems().addAll("<25 ", "25-34", "35-44", "45-54", ">54");
-        ageBox.setPromptText("Age");
+    HBox topfilterBox = new HBox();
+    // Gender and Age ComboBoxes
+    ComboBox<String> genderComboBox = new ComboBox<>();
+    genderComboBox.getItems().addAll("Male", "Female", "All");
+    genderComboBox.setPromptText("Gender");
+    genderComboBox.setPrefSize(100, 26);
 
-        ComboBox<String> incomeBox = new ComboBox<>();
-        incomeBox.getItems().addAll("Low ", "Medium", "High");
-        incomeBox.setPromptText("Income");
+    ComboBox<String> ageComboBox = new ComboBox<>();
+    ageComboBox.promptTextProperty().set("Age");
+    ageComboBox.getItems().addAll("<25", "25-34", "35-44", "45-54", ">54", "All");
+    ageComboBox.setPrefSize(100, 26);
 
-        ComboBox<String> contextBox = new ComboBox<>();
-    contextBox.getItems().addAll("News", "Shopping", "Social Media", "Blog", "Hobbies", "Travel");
-        contextBox.setPromptText("Context");
+    topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
+    topfilterBox.setPadding(new Insets(5, 5, 0, 0));
+    topfilterBox.setAlignment(Pos.CENTER);
 
-        HBox dateBox = new HBox();
-        DatePicker startDate = new DatePicker();
-        startDate.setPrefSize(100, 25);
-        DatePicker endDate = new DatePicker();
-        endDate.setPrefSize(100, 25);
-        dateBox.getChildren().addAll(startDate, new Label("-"), endDate);
-        dateBox.setSpacing(5);
+    // Income and Context
+    HBox bottomfilterBox = new HBox();
 
-        if (isGraph) {
-            genderComboBox1 = genderBox;
-            ageComboBox1 = ageBox;
-            incomeComboBox1 = incomeBox;
-            contextComboBox1 = contextBox;
-            datePicker1 = startDate;
-            datePicker2 = endDate;
-        } else {
-            genderComboBox2 = genderBox;
-            ageComboBox2 = ageBox;
-            incomeComboBox2 = incomeBox;
-            contextComboBox2 = contextBox;
-            datePicker3 = startDate;
-            datePicker4 = endDate;
-        }
-        VBox filterBox = new VBox(5, filterTitle, genderBox, ageBox, incomeBox, contextBox, dateBox);
-        filterBox.setAlignment(Pos.CENTER);
-        return filterBox;
-    }
+    // Income and Context ComboBoxes
+    ComboBox<String> incomeComboBox = new ComboBox<>();
+    incomeComboBox.setPromptText("Income");
+    incomeComboBox.getItems().addAll("Low", "Medium", "High", "All");
+    incomeComboBox.setPrefSize(100, 26);
 
-    private void handleCompareButton(Stage compareStage) {
-        String metric= metricDropdown.getValue();
+    ComboBox<String> contextComboBox = new ComboBox<>();
+    contextComboBox.promptTextProperty().set("Context");
+    contextComboBox
+        .getItems()
+        .addAll("News", "Shopping", "Social Media", "Blog", "Hobbies", "Travel", "All");
+    contextComboBox.setPrefSize(100, 26);
+    bottomfilterBox.getChildren().addAll(incomeComboBox, contextComboBox);
+    bottomfilterBox.setPadding(new Insets(5, 5, 0, 0));
+    bottomfilterBox.setAlignment(Pos.CENTER);
+
+    // Time Granularity
+    Label timeGranularityLabel = new Label("Time Granularity");
+    timeGranularityLabel.setPadding(new Insets(5, 5, 0, 0));
+    HBox timeGranularityToggleBox = new HBox();
+
+    ToggleGroup timeGranularityGroup = new ToggleGroup();
+
+    ToggleButton hourToggle = new ToggleButton("Hour");
+    ToggleButton dayToggle = new ToggleButton("Day");
+    ToggleButton weekToggle = new ToggleButton("Week");
+
+    hourToggle.setToggleGroup(timeGranularityGroup);
+    dayToggle.setToggleGroup(timeGranularityGroup);
+    weekToggle.setToggleGroup(timeGranularityGroup);
+
+    timeGranularityToggleBox.getChildren().addAll(hourToggle, dayToggle, weekToggle);
+    timeGranularityToggleBox.setPadding(new Insets(5, 5, 0, 0));
+    timeGranularityToggleBox.setAlignment(Pos.CENTER);
+
+    // Bounce Definition
+    Label bounceDefinitionLabel = new Label("Bounce Definition");
+    ToggleGroup bounceDefinitionGroup = new ToggleGroup();
+
+
+    ToggleButton pageleftBounceToggle = new ToggleButton("Page Left");
+    ToggleButton singlePageBounceToggle = new ToggleButton("Single Page");
+    pageleftBounceToggle.setToggleGroup(bounceDefinitionGroup);
+    singlePageBounceToggle.setToggleGroup(bounceDefinitionGroup);
+
+    bounceDefinitionLabel.setPadding(new Insets(5, 5, 0, 0));
+
+    HBox bounceDefinitionBox = new HBox();
+    bounceDefinitionBox.getChildren().addAll(pageleftBounceToggle, singlePageBounceToggle);
+    bounceDefinitionBox.setPadding(new Insets(5, 5, 0, 0));
+    bounceDefinitionBox.setAlignment(Pos.CENTER);
+
+    // Date pickers
+    Label datePickerLabel = new Label("Date Range");
+    HBox datePickerBox = new HBox();
+
+    DatePicker startDatePicker = new DatePicker();
+    startDatePicker.setPrefSize(200.0, 35.0);
+    startDatePicker.setValue(startDate);
+    Label toLabel = new Label("to");
+    DatePicker endDatePicker = new DatePicker();
+    endDatePicker.setPrefSize(200.0, 35.0);
+    endDatePicker.setValue(endDate);
+    datePickerBox.getChildren().addAll(startDatePicker, toLabel, endDatePicker);
+    datePickerBox.setPadding(new Insets(5, 0, 15, 0));
+
+    Label filterTitle = new Label(title);
+
+      // Adding  content to panel
+      filtersPanel
+              .getChildren()
+              .addAll(
+                      filterTitle,
+                      topfilterBox,
+                      bottomfilterBox,
+                      timeGranularityLabel,
+                      timeGranularityToggleBox,
+                      bounceDefinitionLabel,
+                      bounceDefinitionBox,
+                      datePickerLabel,
+                      datePickerBox
+                      );
+      filtersPanel.setAlignment(Pos.CENTER);
+
+      if (isLeftGraph) {
+          genderComboBox1 = genderComboBox;
+          ageComboBox1 = ageComboBox;
+          incomeComboBox1 = incomeComboBox;
+          contextComboBox1 = contextComboBox;
+          bounceDefinitionGroupLeft = bounceDefinitionGroup;
+          singlePageBounceToggleLeft = singlePageBounceToggle;
+          pageleftBounceToggleLeft = pageleftBounceToggle;
+          timeGranularityGroupLeft = timeGranularityGroup;
+          hourToggleLeft = hourToggle;
+          dayToggleLeft = dayToggle;
+          weekToggleLeft = weekToggle;
+          startDatePickerLeft = startDatePicker;
+          endDatePickerLeft = endDatePicker;
+      } else {
+          genderComboBox2 = genderComboBox;
+          ageComboBox2 = ageComboBox;
+          incomeComboBox2 = incomeComboBox;
+          contextComboBox2 = contextComboBox;
+          bounceDefinitionGroupRight = bounceDefinitionGroup;
+          singlePageBounceToggleRight = singlePageBounceToggle;
+          pageleftBounceToggleRight = pageleftBounceToggle;
+          timeGranularityGroupRight = timeGranularityGroup;
+          hourToggleRight = hourToggle;
+          dayToggleRight = dayToggle;
+          weekToggleRight = weekToggle;
+          startDatePickerRight = startDatePicker;
+          endDatePickerRight = endDatePicker;
+      }
+
+
+      return filtersPanel;
+
+
+  }
+
+  private void handleCompareButton(Stage compareStage) {
+
+
+      Toggle selectedToggleLeft = timeGranularityGroupLeft.getSelectedToggle();
+      Toggle selectedToggleRight = timeGranularityGroupLeft.getSelectedToggle();
+      String granularityLeft;
+      String granularityRight;
+      String bounceTypeLeft = pageleftBounceToggleLeft.isSelected() ? "PageLeft" : "SinglePage";
+      String bounceTypeRight = pageleftBounceToggleRight.isSelected() ? "PageLeft" : "SinglePage";
+
+      if (selectedToggleLeft == hourToggleLeft) {
+          granularityLeft = "Hourly";
+      } else if (selectedToggleLeft == dayToggleLeft) {
+          granularityLeft = "Daily";
+      } else if (selectedToggleLeft == weekToggleLeft) {
+          granularityLeft = "Weekly";
+      } else {
+          granularityLeft = "Daily"; // Default option clearly set here
+      }
+
+      if (selectedToggleRight == hourToggleRight) {
+          granularityRight = "Hourly";
+      } else if (selectedToggleRight == dayToggleRight) {
+          granularityRight = "Daily";
+      } else if (selectedToggleRight == weekToggleRight) {
+          granularityRight = "Weekly";
+      } else {
+          granularityRight = "Daily"; // Default option clearly set here
+      }
+
+
+      String metric= metricDropdown.getValue();
+      String campaignName = campaign.getName();
         String gender1 = genderComboBox1.getValue();
         String age1 = ageComboBox1.getValue();
         String income1 = incomeComboBox1.getValue();
         String context1 = contextComboBox1.getValue();
-        String startDate1 = (datePicker1.getValue() != null) ? datePicker1.getValue().toString() : null;
-        String endDate1 = (datePicker2.getValue() != null) ? datePicker2.getValue().toString() : null;
+        String granularity1 = granularityLeft;
+        LocalDateTime startselectedDateLeft = startDatePickerLeft.getValue().atTime(00, 00, 00);
+        LocalDateTime endselectedDateLeft = endDatePickerLeft.getValue().atTime(23, 59, 59);
+        Map<String,String> filtersMap1 = new HashMap<>();
+        filtersMap1.put("campaignName", campaignName);
+        filtersMap1.put("selectedMetric", metric);
+        filtersMap1.put("Gender", gender1);
+        filtersMap1.put("Age", age1);
+        filtersMap1.put("Income", income1);
+        filtersMap1.put("Context", context1);
+        filtersMap1.put("Granularity", granularity1);
+        filtersMap1.put("bounceDefinition", bounceTypeLeft);
 
-        String gender2 = genderComboBox2.getValue();
-        String age2 = ageComboBox2.getValue();
-        String income2 = incomeComboBox2.getValue();
-        String context2 = contextComboBox2.getValue();
-        String startDate2 = (datePicker3.getValue() != null) ? datePicker3.getValue().toString() : null;
-        String endDate2 = (datePicker4.getValue() != null) ? datePicker4.getValue().toString() : null;
+      String gender2 = genderComboBox2.getValue();
+      String age2 = ageComboBox2.getValue();
+      String income2 = incomeComboBox2.getValue();
+      String context2 = contextComboBox2.getValue();
+      String granularity2 = granularityRight;
+      LocalDateTime startselectedDateRight = startDatePickerRight.getValue().atTime(00, 00, 00);
+      LocalDateTime endselectedDateRight = endDatePickerRight.getValue().atTime(23, 59, 59);
+      Map<String,String> filtersMap2 = new HashMap<>();
+      filtersMap2.put("campaignName", campaignName);
+      filtersMap2.put("selectedMetric", metric);
+      filtersMap2.put("Gender", gender2);
+      filtersMap2.put("Age", age2);
+      filtersMap2.put("Income", income2);
+      filtersMap2.put("Context", context2);
+      filtersMap2.put("Granularity", granularity2);
+      filtersMap2.put("bounceDefinition", bounceTypeRight);
 
-        CompareGraphsResultView resultView = new CompareGraphsResultView( primaryStage, uiController,metric, gender1, age1, income1, context1, startDate1, endDate1,
-                gender2, age2, income2, context2, startDate2, endDate2);
+        CompareGraphsResultView resultView = new CompareGraphsResultView( primaryStage, uiController,filtersMap1, startselectedDateLeft, endselectedDateLeft,
+                filtersMap2, startselectedDateRight, endselectedDateRight);
         resultView.show();
         compareStage.close();
     }

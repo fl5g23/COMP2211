@@ -22,8 +22,6 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 
 import java.io.File;
 
@@ -128,7 +126,7 @@ public class MainScreen {
     compareGraphButton.setOnAction(e -> {
       Campaign selectedCampaign = getSelectedCampaign();
       if (selectedCampaign != null){
-        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller);
+        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller, startDatePicker, endDatePicker, selectedCampaign);
         compareGraphsView.show();
       } else {
         showAlert(null, "No campaign selected");
@@ -429,6 +427,8 @@ public class MainScreen {
 
               // Update the bounce rate calculation
               controller.queryStatistics(filtersMap, startselectedDate, endselectedDate);
+              controller.updateStatistics(selectedCampaign.getName());
+              controller.generateGraph(filtersMap);
               controller.updateBounceRate(selectedCampaign.getName(), bounceType);
             }
           }
@@ -626,14 +626,14 @@ public class MainScreen {
   public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric, String granularity) {
     System.out.println("Data received in UI: " + metricsOverTime);
 
-//    if (!lastGranularity.equals(granularity)){
-//      lineChart.setAnimated(false);
-//      lastGranularity = granularity;
-//    }else{
-//      lineChart.setAnimated(true);
-//    }
+    //    if (!lastGranularity.equals(granularity)){
+    //      lineChart.setAnimated(false);
+    //      lastGranularity = granularity;
+    //    }else{
+    //      lineChart.setAnimated(true);
+    //    }
 
-    if (!firstGraphGeneration){
+    if (!firstGraphGeneration) {
       lineChart.setAnimated(true);
     }
 

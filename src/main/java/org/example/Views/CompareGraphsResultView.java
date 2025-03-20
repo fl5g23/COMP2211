@@ -9,55 +9,58 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.example.Controllers.UIController;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 public class CompareGraphsResultView {
     private Stage primaryStage;
     private UIController controller;
-    private String metric;
-    private String gender1, age1, income1, context1, startDate1, endDate1;
-    private String gender2, age2, income2, context2, startDate2, endDate2;
+    Map<String, String> filtersMap1;
+    Map<String, String> filtersMap2;
+    LocalDateTime startselectedDateLeft;
+    LocalDateTime endselectedDateLeft;
+    LocalDateTime startselectedDateRight;
+    LocalDateTime endselectedDateRight;
+
 
     private LineChart<String, Number> lineChart1;
     private LineChart<String, Number> lineChart2;
 
-    public CompareGraphsResultView(
-            Stage primaryStage, UIController controller, String metric,
-            String gender1, String age1, String income1, String context1, String startDate1, String endDate1,
-            String gender2, String age2, String income2, String context2, String startDate2, String endDate2) {
+
+    public CompareGraphsResultView(Stage primaryStage, UIController uiController, Map<String, String> filtersMap1, LocalDateTime startselectedDateLeft, LocalDateTime endselectedDateLeft, Map<String, String> filtersMap2, LocalDateTime startselectedDateRight, LocalDateTime endselectedDateRight) {
         this.primaryStage = primaryStage;
-        this.controller = controller;
-        this.metric = metric;
-        this.gender1 = gender1;
-        this.age1 = age1;
-        this.income1 = income1;
-        this.context1 = context1;
-        this.startDate1 = startDate1;
-        this.endDate1 = endDate1;
-        this.gender2 = gender2;
-        this.age2 = age2;
-        this.income2 = income2;
-        this.context2 = context2;
-        this.startDate2 = startDate2;
-        this.endDate2 = endDate2;
+        this.controller = uiController;
+        this.filtersMap1 = filtersMap1;
+        this.filtersMap2 = filtersMap2;
+        this.startselectedDateLeft = startselectedDateLeft;
+        this.startselectedDateRight = startselectedDateRight;
+        this.endselectedDateLeft = endselectedDateLeft;
+        this.endselectedDateRight = endselectedDateRight;
+
     }
 
     public void show() {
         Stage compareResultStage = new Stage();
         compareResultStage.setTitle("Comparison Result");
 
+        String metric = filtersMap1.get("selectedMetric");
+
         // Create two charts
         lineChart1 = createLineChart("Graph 1: " + metric);
         lineChart2 = createLineChart("Graph 2: " + metric);
 
         // Generate graphs using existing controller method
-        generateGraphForChart(lineChart1, gender1, age1, income1, context1, startDate1, endDate1);
-        generateGraphForChart(lineChart2, gender2, age2, income2, context2, startDate2, endDate2);
+        generateGraphForChart(lineChart1, filtersMap1, startselectedDateLeft, endselectedDateLeft);
+        generateGraphForChart(lineChart2, filtersMap2, startselectedDateRight, endselectedDateRight);
 
         // Layout for two charts side by side
         HBox chartContainer = new HBox(20, lineChart1, lineChart2);
@@ -91,23 +94,47 @@ public class CompareGraphsResultView {
     }
 
     private void generateGraphForChart(LineChart<String, Number> chart,
-                                       String gender, String age, String income, String context,
-                                       String startDate, String endDate) {
+                                       Map<String, String> filtersMap, LocalDateTime startDate, LocalDateTime endDate) {
         // Use existing generateGraph() method from UIController
-        controller.generateGraph("Campaign1", "PageLeft", metric, "Daily", gender);
+
+        String selectedMetric = filtersMap.get("selectedMetric");
+        controller.queryStatistics(filtersMap,startDate,endDate);
 
         // Fetch graph data from controller
-        Map<String, Map<String, Integer>> metricsOverTime = controller.dataController.getMetricsOverTime("Campaign1", "PageLeft", gender);
+        Map<String, Map<String, Integer>> metricsOverTime = controller.dataController.getMetricsOverTime(filtersMap);
+        Map<String,Integer> dataMap = metricsOverTime.get(selectedMetric);
 
-        if (metricsOverTime.containsKey(metric)) {
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName(metric);
+        System.out.println("Data received in UI: " + metricsOverTime);
 
-            metricsOverTime.get(metric).forEach((date, value) -> {
-                series.getData().add(new XYChart.Data<>(date, value));
-            });
+        chart.getData().clear();
 
-            Platform.runLater(() -> chart.getData().add(series));
+        if (!metricsOverTime.containsKey(selectedMetric)) {
+            System.out.println("Metric not found: " + selectedMetric);
+            return;
         }
+
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName(selectedMetric);
+
+
+
+        List<String> sortedDates = new ArrayList<>(dataMap.keySet());
+        sortedDates.sort(Comparator.naturalOrder());
+
+        for (String date : sortedDates) {
+            double yValue = dataMap.get(date) * 1.0;
+            XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(date, yValue);
+
+            // Add tooltip showing raw and scaled values
+            Tooltip tooltip = new Tooltip(selectedMetric + "\nDate: " + date +
+                    "\nRaw: " + dataMap.get(date) + "\nScaled: " + yValue);
+            Platform.runLater(() -> Tooltip.install(dataPoint.getNode(), tooltip));
+
+            series.getData().add(dataPoint);
+        }
+
+
+        Platform.runLater(() -> chart.getData().add(series));
+
     }
 }
