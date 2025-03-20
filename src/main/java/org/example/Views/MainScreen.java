@@ -122,6 +122,20 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
+    exportButton.setOnAction(
+        e -> {
+          Campaign selectedCampaign = getSelectedCampaign();
+          if (selectedCampaign != null) {
+            if (lineChart.isVisible()) {
+              exportChartWithDialog(lineChart); // Export JavaFX LineChart
+            } else {
+              exportHistogramAsImage(); // Export JFreeChart Histogram
+            }
+          }else{
+            showAlert(null, "exportingbeforecampaignloaded");
+          }
+        });
+
     Button compareGraphButton = new Button("Compare Graphs");
     compareGraphButton.setOnAction(e -> {
       Campaign selectedCampaign = getSelectedCampaign();
@@ -129,7 +143,7 @@ public class MainScreen {
         CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller, startDatePicker, endDatePicker, selectedCampaign);
         compareGraphsView.show();
       } else {
-        showAlert(null, "No campaign selected");
+        showAlert(null, "comparingbeforecampaignloaded");
       }
     });
 
@@ -225,13 +239,7 @@ public class MainScreen {
 
     VBox centerPanel = new VBox(chartContainer);
     centerPanel.setPrefSize(600, 400);
-    exportButton.setOnAction(e -> {
-      if (lineChart.isVisible()) {
-        exportChartWithDialog(lineChart);  // Export JavaFX LineChart
-      } else {
-        exportHistogramAsImage();  // Export JFreeChart Histogram
-      }
-    });
+
     // Layout
     BorderPane root = new BorderPane();
     root.setTop(topBar);
@@ -240,7 +248,7 @@ public class MainScreen {
 
     setupCloseHandler(primaryStage);
 
-    Scene scene = new Scene(root, 900, 600);
+    Scene scene = new Scene(root, 1100, 600);
     primaryStage.setScene(scene);
     primaryStage.show();
   }
@@ -542,7 +550,16 @@ public class MainScreen {
       alert.setTitle("Error");
       alert.setHeaderText("Dates wrong order");
       alert.setContentText("The starting date must come before the ending date");
-    } else {
+    }else if (type.equals("comparingbeforecampaignloaded")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Compare Graphs Failed");
+      alert.setContentText("A campaign must be loaded before you compare graphs");
+    }else if (type.equals("exportingbeforecampaignloaded")){
+      alert.setTitle("Error");
+      alert.setHeaderText("Export Graph failed");
+      alert.setContentText("A campaign must be loaded before you export");
+    }
+    else {
       alert.setTitle("Error");
       alert.setHeaderText("Wrong format");
       alert.setContentText(file.getName() + " has wrong format for " + type + " log file");
