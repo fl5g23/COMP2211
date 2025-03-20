@@ -281,6 +281,7 @@ public class MainScreen {
 
     ComboBox<String> ageComboBox = new ComboBox<>();
     ageComboBox.promptTextProperty().set("Age");
+    ageComboBox.getItems().addAll("<25", "25-34", "35-44", "45-54", ">54", "All");
     ageComboBox.setPrefSize(100, 26);
 
     topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
@@ -293,10 +294,12 @@ public class MainScreen {
     // Income and Context ComboBoxes
     ComboBox<String> incomeComboBox = new ComboBox<>();
     incomeComboBox.setPromptText("Income");
+    incomeComboBox.getItems().addAll("Low", "Medium", "High", "All");
     incomeComboBox.setPrefSize(100, 26);
 
     ComboBox<String> contextComboBox = new ComboBox<>();
     contextComboBox.promptTextProperty().set("Context");
+    contextComboBox.getItems().addAll("News", "Shopping", "Social Media", "Blog", "Hobbies", "Travel", "All");
     contextComboBox.setPrefSize(100, 26);
     bottomfilterBox.getChildren().addAll(incomeComboBox, contextComboBox);
     bottomfilterBox.setPadding(new Insets(5, 5, 0, 0));
