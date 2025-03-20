@@ -124,11 +124,22 @@ public class MainScreen {
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
 
+    Button compareGraphButton = new Button("Compare Graphs");
+    compareGraphButton.setOnAction(e -> {
+      Campaign selectedCampaign = getSelectedCampaign();
+      if (selectedCampaign != null){
+        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller);
+        compareGraphsView.show();
+      } else {
+        showAlert(null, "No campaign selected");
+      }
+    });
+
 
     Button authoriseUsersButton = new Button("Authorise Users");
     authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
 
-    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, toggleHistogramTypeBtn, authoriseUsersButton);
+    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, compareGraphButton, toggleHistogramTypeBtn, authoriseUsersButton);
     topBar.setSpacing(20);
 
 
