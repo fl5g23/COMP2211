@@ -21,7 +21,7 @@ import java.util.Map;
  */
 public class UIController {
     private final MainScreen mainScreen;
-    private final DataController dataController;
+    public final DataController dataController;
     private List<Campaign> campaigns;
     private Campaign currentCampaign;
     private final Stage primaryStage;
