@@ -2,6 +2,7 @@ package org.example.Controllers;
 
 import org.example.Models.Auth;
 import org.example.Models.Campaign;
+import org.example.Models.FiltersBox;
 import org.example.Models.StatsCalculator;
 
 import java.time.LocalDate;
@@ -96,7 +97,7 @@ public class DataController {
     /**
      * Gets metrics over time for a campaign.
      */
-    public Map<String, Map<String, Integer>> getMetricsOverTime(Map<String, String> filterSettings) {
+    public Map<String, Map<String, Integer>> getMetricsOverTime(FiltersBox filterSettings) {
         return statsCalculator.getMetricsOverTime(filterSettings);
     }
 

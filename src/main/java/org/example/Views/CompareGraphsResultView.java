@@ -14,6 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.example.Controllers.UIController;
+import org.example.Models.FiltersBox;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,27 +25,18 @@ import java.util.Map;
 public class CompareGraphsResultView {
     private Stage primaryStage;
     private UIController controller;
-    Map<String, String> filtersMap1;
-    Map<String, String> filtersMap2;
-    LocalDateTime startselectedDateLeft;
-    LocalDateTime endselectedDateLeft;
-    LocalDateTime startselectedDateRight;
-    LocalDateTime endselectedDateRight;
+    private FiltersBox rightGraphFilters;
+    private FiltersBox leftGraphFilters;
+    private LineChart<String, Number> lineChartLeft;
+    private LineChart<String, Number> lineChartRight;
 
 
-    private LineChart<String, Number> lineChart1;
-    private LineChart<String, Number> lineChart2;
-
-
-    public CompareGraphsResultView(Stage primaryStage, UIController uiController, Map<String, String> filtersMap1, LocalDateTime startselectedDateLeft, LocalDateTime endselectedDateLeft, Map<String, String> filtersMap2, LocalDateTime startselectedDateRight, LocalDateTime endselectedDateRight) {
+    public CompareGraphsResultView(Stage primaryStage, UIController uiController, FiltersBox rightGraphFilters, FiltersBox leftGraphFilters) {
         this.primaryStage = primaryStage;
         this.controller = uiController;
-        this.filtersMap1 = filtersMap1;
-        this.filtersMap2 = filtersMap2;
-        this.startselectedDateLeft = startselectedDateLeft;
-        this.startselectedDateRight = startselectedDateRight;
-        this.endselectedDateLeft = endselectedDateLeft;
-        this.endselectedDateRight = endselectedDateRight;
+
+        this.rightGraphFilters = rightGraphFilters;
+        this.leftGraphFilters = leftGraphFilters;
 
     }
 
@@ -52,18 +44,16 @@ public class CompareGraphsResultView {
         Stage compareResultStage = new Stage();
         compareResultStage.setTitle("Comparison Result");
 
-        String metric = filtersMap1.get("selectedMetric");
-
-        // Create two charts
-        lineChart1 = createLineChart("Graph 1: " + metric);
-        lineChart2 = createLineChart("Graph 2: " + metric);
+        String metric = rightGraphFilters.getMetric();
+        lineChartLeft = createLineChart("Graph 1: " + metric);
+        lineChartRight = createLineChart("Graph 2: " + metric);
 
         // Generate graphs using existing controller method
-        generateGraphForChart(lineChart1, filtersMap1, startselectedDateLeft, endselectedDateLeft);
-        generateGraphForChart(lineChart2, filtersMap2, startselectedDateRight, endselectedDateRight);
+        generateGraphForChart(lineChartLeft, rightGraphFilters);
+        generateGraphForChart(lineChartRight, leftGraphFilters);
 
         // Layout for two charts side by side
-        HBox chartContainer = new HBox(20, lineChart1, lineChart2);
+        HBox chartContainer = new HBox(20, lineChartLeft, lineChartRight);
         chartContainer.setAlignment(Pos.CENTER);
         chartContainer.setPadding(new Insets(20));
 
@@ -94,14 +84,14 @@ public class CompareGraphsResultView {
     }
 
     private void generateGraphForChart(LineChart<String, Number> chart,
-                                       Map<String, String> filtersMap, LocalDateTime startDate, LocalDateTime endDate) {
+                                       FiltersBox filtersBox) {
         // Use existing generateGraph() method from UIController
 
-        String selectedMetric = filtersMap.get("selectedMetric");
-        controller.queryStatistics(filtersMap,startDate,endDate);
+        String selectedMetric = filtersBox.getMetric();
+        controller.queryStatistics(filtersBox);
 
         // Fetch graph data from controller
-        Map<String, Map<String, Integer>> metricsOverTime = controller.dataController.getMetricsOverTime(filtersMap);
+        Map<String, Map<String, Integer>> metricsOverTime = controller.dataController.getMetricsOverTime(filtersBox);
         Map<String,Integer> dataMap = metricsOverTime.get(selectedMetric);
 
         System.out.println("Data received in UI: " + metricsOverTime);

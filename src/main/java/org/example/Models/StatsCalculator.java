@@ -378,16 +378,16 @@ public class StatsCalculator {
     return false; // Default to false if something goes wrong
   }
   //daily
-  public Map<String, Map<String, Integer>> getMetricsOverTime(Map<String, String> filterSettings) {
+  public Map<String, Map<String, Integer>> getMetricsOverTime(FiltersBox filterSettings) {
 
     Map<String, Map<String, Integer>> metrics = new TreeMap<>();
 
     String sql = "";
-    String campaignName = filterSettings.get("campaignName");
-    String selectedGender = filterSettings.get("Gender");
-    String timeGranularity = filterSettings.get("Granularity");
-    String selectedMetric = filterSettings.get("selectedMetric");
-    String bounceType = filterSettings.get("bounceDefinition");
+    String campaignName = filterSettings.getCampaignName();
+    String selectedGender = filterSettings.getGender();
+    String timeGranularity = filterSettings.getGranularity();
+    String selectedMetric = filterSettings.getMetric();
+    String bounceType = filterSettings.getBounceValue();
 
 
     // Validate and normalize inputs
@@ -481,12 +481,12 @@ public class StatsCalculator {
   }
 
   // Keep this method separate for weekly metrics since it requires more complex date calculations
-  public Map<String, Map<String, Integer>> getMetricsWeekly(Map<String, String> filterSettings) {
+  public Map<String, Map<String, Integer>> getMetricsWeekly(FiltersBox filterSettings) {
 
     String sql = "";
-    String campaignName = filterSettings.get("campaignName");
-    String selectedMetric = filterSettings.get("selectedMetric");
-    String bounceType = filterSettings.get("bounceDefinition");
+    String campaignName = filterSettings.getCampaignName();
+    String selectedMetric = filterSettings.getMetric();
+    String bounceType = filterSettings.getBounceValue();
     String bounceCondition;
 
 

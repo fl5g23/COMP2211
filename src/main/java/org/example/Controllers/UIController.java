@@ -4,6 +4,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.example.Models.Campaign;
+import org.example.Models.FiltersBox;
 import org.example.Views.AddCampaignView;
 import org.example.Views.AuthoriseUsersView;
 import org.example.Views.LoginPage;
@@ -119,27 +120,21 @@ public class UIController {
      *
      * @param campaign       the selected campaign
      */
-    public void selectCampaign(Campaign campaign ) {
+    public void selectCampaign(Campaign campaign) {
         if (!currentCampaign.equals(campaign)) {
             currentCampaign = campaign;
             updateCampaignName(currentCampaign);
             dataController.resetFiltersSQL();
             updateStatistics(campaign.getName());
+            FiltersBox filtersMap = new FiltersBox(null,campaign.getName(), null, null, 0, 0);
 
-            Map<String, String> filtersMap = new HashMap<>();
-            filtersMap.put("campaignName", campaign.getName());
-            filtersMap.put("bounceDefinition", "PageLeft");
-            filtersMap.put("selectedMetric", "Impressions");
-            filtersMap.put("Granularity","Daily");
-            filtersMap.put("Gender", "All");
-
+            filtersMap.selectFirstGenerationFilters();
             generateGraph(filtersMap);
 
             LocalDateTime startdate = dataController.getCalculator().getCampaignStartDate(campaign.getName());
             LocalDateTime enddate = dataController.getCalculator().getCampaignEndDate(campaign.getName());
 
-            mainScreen.setFirstGenerationFilters(startdate, enddate);
-
+      mainScreen.setFirstGenerationFilters(startdate, enddate, filtersMap.getCampaignName());
 }}
 
 
@@ -170,12 +165,24 @@ public class UIController {
     }
 
   public void queryStatistics(
-      Map<String, String> filtersMap, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+          FiltersBox filtersMap) {
 
-    String gender = filtersMap.get("Gender");
-    String age = filtersMap.get("Age");
-    String income = filtersMap.get("Income");
-    String context = filtersMap.get("Context");
+    String gender = filtersMap.getGender();
+    String age = filtersMap.getAge();
+    String income = filtersMap.getIncome();
+    String context = filtersMap.getContext();
+    String campaignName = filtersMap.getCampaignName();
+    LocalDateTime startDateTime = filtersMap.getStartDate();
+    LocalDateTime endDateTime = filtersMap.getEndDate();
+    Boolean wholeCampaign = false;
+
+    LocalDateTime campaignStartDate = dataController.getCalculator().getCampaignStartDate(campaignName);
+    LocalDateTime campaignEndDate = dataController.getCalculator().getCampaignEndDate(campaignName);
+
+    if (campaignEndDate.equals(endDateTime)&&campaignStartDate.equals(startDateTime)){
+        wholeCampaign = true;
+    }
+
     String startDateTimeStr = startDateTime.toString().replace("T", " ");
     String endDateTimeStr = endDateTime.toString().replace("T", " ");
 
@@ -206,13 +213,18 @@ public class UIController {
       if (context != null && context != "All") {
         sqlAppend += String.format("~ %sContext = '%s' ", prefix, context);
       }
-      sqlAppend += String.format("~ %s BETWEEN '%s' AND '%s'", dateIdentifier, startDateTimeStr, endDateTimeStr);
+
+      if (!wholeCampaign){
+        sqlAppend +=
+            String.format(
+                "~ %s BETWEEN '%s' AND '%s'", dateIdentifier, startDateTimeStr, endDateTimeStr);
+      }
 
       // Replace "~" with "AND" and remove the trailing "AND"
       sqlAppend = sqlAppend.replace("~", "AND");
 
       // Check for the trailing "AND" and remove it if present
-      if (!sqlAppend.startsWith("AND")) {
+      if (!sqlAppend.startsWith("AND")&&!sqlAppend.equals("")) {
         sqlAppend = "AND " + sqlAppend;
       }
       sqlStatements.add(sqlAppend);
@@ -245,10 +257,10 @@ public class UIController {
    *
    * @param filterSettings the name of the campaign
    */
-  public void generateGraph(Map<String,String> filterSettings) {
+  public void generateGraph(FiltersBox filterSettings) {
     Map<String, Map<String, Integer>> metricsOverTime;
     metricsOverTime = dataController.getMetricsOverTime(filterSettings);
-    mainScreen.updatePerformanceGraph(metricsOverTime, filterSettings.get("selectedMetric"), filterSettings.get("Granularity"));
+    mainScreen.updatePerformanceGraph(metricsOverTime, filterSettings.getMetric(), filterSettings.getGranularity());
   }
 
 //

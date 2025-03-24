@@ -9,9 +9,12 @@ import java.io.IOException;
 import java.util.*;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
@@ -29,6 +32,7 @@ import javax.imageio.ImageIO;
 import org.example.Models.Campaign;
 import org.example.Models.ClickCostHistogram;
 import org.example.Controllers.UIController;
+import org.example.Models.FiltersBox;
 import org.jfree.chart.ChartPanel;
 import javafx.embed.swing.SwingNode;
 import org.jfree.chart.ChartUtils;
@@ -48,6 +52,8 @@ public class MainScreen {
   private UIController controller; // Reference to the controller
   Boolean firstGraphGeneration = true; //solves bug with chart generation
   String lastGranularity = "";
+  private LocalDate startDate;
+  private LocalDate endDate;
 
   // Core metric labels
   Label keyMetricsTitle = new Label("Key Metrics:");
@@ -73,12 +79,8 @@ public class MainScreen {
   Label cpmValue = new Label("");
   Label totalCostValue = new Label("");
   Button toggleChartBtn = new Button("Switch to Histogram");
+  FiltersBox filtersPanel;
 
-  ToggleButton pageleftBounceToggle = new ToggleButton("Page Left");
-  ToggleButton singlePageBounceToggle = new ToggleButton("Single Page");
-
-  DatePicker startDatePicker = new DatePicker();
-  DatePicker endDatePicker = new DatePicker();
 
   private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
   ComboBox<String> metricDropdown = new ComboBox<>();
@@ -140,7 +142,7 @@ public class MainScreen {
     compareGraphButton.setOnAction(e -> {
       Campaign selectedCampaign = getSelectedCampaign();
       if (selectedCampaign != null){
-        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller, startDatePicker, endDatePicker, selectedCampaign);
+        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller, startDate, endDate, selectedCampaign);
         compareGraphsView.show();
       } else {
         showAlert(null, "comparingbeforecampaignloaded");
@@ -292,9 +294,7 @@ public class MainScreen {
    * Create the filters panel
    */
   private VBox createFiltersPanel() {
-    VBox filtersPanel = new VBox();
-    filtersPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
-    filtersPanel.setPrefSize(132, 500);
+    filtersPanel = new FiltersBox(null, null, null, null, 132,  500);
 
     // Filters title
     Label filterLabel = new Label("Filters");
@@ -309,82 +309,7 @@ public class MainScreen {
 
     VBox metricBox = new VBox(metricLabel, metricDropdown);
     metricBox.setAlignment(Pos.CENTER);
-
-    HBox topfilterBox = new HBox();
-    // Gender and Age ComboBoxes
-    ComboBox<String> genderComboBox = new ComboBox<>();
-    genderComboBox.getItems().addAll("Male","Female","All");
-    genderComboBox.setPromptText("Gender");
-    genderComboBox.setPrefSize(100, 26);
-
-    ComboBox<String> ageComboBox = new ComboBox<>();
-    ageComboBox.promptTextProperty().set("Age");
-    ageComboBox.getItems().addAll("<25", "25-34", "35-44", "45-54", ">54", "All");
-    ageComboBox.setPrefSize(100, 26);
-
-    topfilterBox.getChildren().addAll(genderComboBox, ageComboBox);
-    topfilterBox.setPadding(new Insets(5, 5, 0, 0));
-    topfilterBox.setAlignment(Pos.CENTER);
-
-    // Income and Context
-    HBox bottomfilterBox = new HBox();
-
-    // Income and Context ComboBoxes
-    ComboBox<String> incomeComboBox = new ComboBox<>();
-    incomeComboBox.setPromptText("Income");
-    incomeComboBox.getItems().addAll("Low", "Medium", "High", "All");
-    incomeComboBox.setPrefSize(100, 26);
-
-    ComboBox<String> contextComboBox = new ComboBox<>();
-    contextComboBox.promptTextProperty().set("Context");
-    contextComboBox.getItems().addAll("News", "Shopping", "Social Media", "Blog", "Hobbies", "Travel", "All");
-    contextComboBox.setPrefSize(100, 26);
-    bottomfilterBox.getChildren().addAll(incomeComboBox, contextComboBox);
-    bottomfilterBox.setPadding(new Insets(5, 5, 0, 0));
-    bottomfilterBox.setAlignment(Pos.CENTER);
-
-    // Time Granularity
-    Label timeGranularityLabel = new Label("Time Granularity");
-    timeGranularityLabel.setPadding(new Insets(5, 5, 0, 0));
-    HBox timeGranularityToggleBox = new HBox();
-
-    ToggleGroup timeGranularityGroup = new ToggleGroup();
-
-    ToggleButton hourToggle = new ToggleButton("Hour");
-    ToggleButton dayToggle = new ToggleButton("Day");
-    ToggleButton weekToggle = new ToggleButton("Week");
-
-    hourToggle.setToggleGroup(timeGranularityGroup);
-    dayToggle.setToggleGroup(timeGranularityGroup);
-    weekToggle.setToggleGroup(timeGranularityGroup);
-
-    timeGranularityToggleBox.getChildren().addAll(hourToggle, dayToggle, weekToggle);
-    timeGranularityToggleBox.setPadding(new Insets(5, 5, 0, 0));
-    timeGranularityToggleBox.setAlignment(Pos.CENTER);
-
-    // Bounce Definition
-    Label bounceDefinitionLabel = new Label("Bounce Definition");
-    ToggleGroup bounceDefinitionGroup = new ToggleGroup();
-    pageleftBounceToggle.setToggleGroup(bounceDefinitionGroup);
-    singlePageBounceToggle.setToggleGroup(bounceDefinitionGroup);
-
-    bounceDefinitionLabel.setPadding(new Insets(5, 5, 0, 0));
-
-    HBox bounceDefinitionBox = new HBox();
-    bounceDefinitionBox.getChildren().addAll(pageleftBounceToggle, singlePageBounceToggle);
-    bounceDefinitionBox.setPadding(new Insets(5, 5, 0, 0));
-    bounceDefinitionBox.setAlignment(Pos.CENTER);
-
-    // Date pickers
-    Label datePickerLabel = new Label("Date Range");
-    HBox datePickerBox = new HBox();
-    startDatePicker = new DatePicker();
-    startDatePicker.setPrefSize(200.0, 35.0);
-    Label toLabel = new Label("to");
-    endDatePicker = new DatePicker();
-    endDatePicker.setPrefSize(200.0, 35.0);
-    datePickerBox.getChildren().addAll(startDatePicker, toLabel, endDatePicker);
-    datePickerBox.setPadding(new Insets(5, 0, 15, 0));
+    metricBox.setPadding(new Insets(0, 0, 5, 0));
 
     // keeping the apply Filters button at bottom
     Button applyButton = new Button("Apply filters");
@@ -393,73 +318,42 @@ public class MainScreen {
         e -> {
           Campaign selectedCampaign = getSelectedCampaign();
           if (selectedCampaign != null) {
-          LocalDateTime startselectedDate = startDatePicker.getValue().atTime(00, 00, 00);
-          LocalDateTime endselectedDate = endDatePicker.getValue().atTime(23, 59, 59);
+            LocalDateTime startselectedDate = filtersPanel.getStartDate();
+            LocalDateTime endselectedDate = filtersPanel.getEndDate();
 
-          if (startselectedDate.isAfter(endselectedDate)) {
-            showAlert(null, "calendardateswrongorder");
-          } else {
-
-              String bounceType = pageleftBounceToggle.isSelected() ? "PageLeft" : "SinglePage";
-              String selectedMetric = metricDropdown.getValue();
-              String selectedGender = genderComboBox.getValue();
-              String selectedAge = ageComboBox.getValue();
-              String selectedIncome = incomeComboBox.getValue();
-              String selectedContext = contextComboBox.getValue();
-
-              // Clearly determine granularity based on selected toggle
-              Toggle selectedToggle = timeGranularityGroup.getSelectedToggle();
-              String granularity;
-
-              if (selectedToggle == hourToggle) {
-                granularity = "Hourly";
-              } else if (selectedToggle == dayToggle) {
-                granularity = "Daily";
-              } else if (selectedToggle == weekToggle) {
-                granularity = "Weekly";
-              } else {
-                granularity = "Daily"; // Default option clearly set here
-              }
-
-              // Call generateGraph method with both granularity and gender filtering
-              Map<String, String> filtersMap = new HashMap<>();
-              filtersMap.put("campaignName", selectedCampaign.getName());
-              filtersMap.put("selectedMetric", selectedMetric);
-              filtersMap.put("Gender", selectedGender);
-              filtersMap.put("Age", selectedAge);
-              filtersMap.put("Income", selectedIncome);
-              filtersMap.put("Context", selectedContext);
-              filtersMap.put("Granularity", granularity);
-              filtersMap.put("bounceDefinition", bounceType);
-
+            if (startselectedDate.isAfter(endselectedDate)) {
+              showAlert(null, "calendardateswrongorder");
+            } else {
 
               // Update the bounce rate calculation
-              controller.queryStatistics(filtersMap, startselectedDate, endselectedDate);
+              controller.queryStatistics(filtersPanel);
               controller.updateStatistics(selectedCampaign.getName());
-              controller.generateGraph(filtersMap);
-              controller.updateBounceRate(selectedCampaign.getName(), bounceType);
+              controller.generateGraph(filtersPanel);
+              controller.updateBounceRate(
+                  selectedCampaign.getName(), filtersPanel.getBounceValue());
             }
           }
         });
 
-    // Adding  content to panel
-    filtersPanel
-        .getChildren()
-        .addAll(
-            metricBox,
-            filterLabel,
-            topfilterBox,
-            bottomfilterBox,
-            timeGranularityLabel,
-            timeGranularityToggleBox,
-            bounceDefinitionLabel,
-            bounceDefinitionBox,
-            datePickerLabel,
-            datePickerBox,
-            applyButton);
-    filtersPanel.setAlignment(Pos.CENTER);
+    // Extract existing children
+    ObservableList<Node> originalChildren = FXCollections.observableArrayList(filtersPanel.getChildren());
 
-    return filtersPanel;
+// Create your returnBox
+    VBox returnBox = new VBox();
+    returnBox.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
+    returnBox.setPrefSize(132, 500);
+    returnBox.setAlignment(Pos.CENTER);
+
+
+// Add in desired order
+    returnBox.getChildren().add(metricBox); // MetricBox (second)
+    for (int i = 0; i < originalChildren.size(); i++) {
+      returnBox.getChildren().add(originalChildren.get(i));
+    }
+    returnBox.getChildren().add(applyButton);
+    returnBox.setAlignment(Pos.CENTER);
+
+    return returnBox;
   }
 
   private Campaign getSelectedCampaign() {
@@ -723,15 +617,12 @@ public class MainScreen {
     });
   }
 
-  public void setFirstGenerationFilters(LocalDateTime startdatetime, LocalDateTime enddatetime){
+  public void setFirstGenerationFilters(LocalDateTime startdatetime, LocalDateTime enddatetime, String campaignName){
     metricDropdown.setValue("Impressions");
-    pageleftBounceToggle.setSelected(true);
 
-    LocalDate startdate = startdatetime.toLocalDate();
-    LocalDate enddate = enddatetime.toLocalDate();
-
-    startDatePicker.setValue(startdate);
-    endDatePicker.setValue(enddate);
+     startDate = startdatetime.toLocalDate();
+     endDate = enddatetime.toLocalDate();
+    filtersPanel.selectFirstGenerationFilters(startDate, endDate, campaignName);
   }
 
 
