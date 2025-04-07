@@ -20,8 +20,6 @@ public class FiltersBox extends VBox {
     private String bounceValue;
     private String granularity;
     private String campaignName;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
     private String metric;
     private ToggleButton pageleftBounceToggle;
     private ToggleButton dayToggle;
@@ -108,13 +106,13 @@ public class FiltersBox extends VBox {
 
         startDatePicker = new DatePicker();
         startDatePicker.setPrefSize(200.0, 35.0);
-        if (this.startDate!= null){
+        if (startDate!= null){
             startDatePicker.setValue(startDate);
         }
         Label toLabel = new Label("to");
         endDatePicker = new DatePicker();
         endDatePicker.setPrefSize(200.0, 35.0);
-        if (this.endDate != null){
+        if (endDate != null){
             endDatePicker.setValue(endDate);
         }
         datePickerBox.getChildren().addAll(startDatePicker, toLabel, endDatePicker);
@@ -161,19 +159,6 @@ public class FiltersBox extends VBox {
                 granularity = "Daily";
             }
         });
-
-        startDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                this.startDate = newVal.atTime(0, 0, 0);
-            }
-        });
-
-        endDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                this.endDate = newVal.atTime(23, 59, 59);
-            }
-        });
-
     }
 
 
@@ -218,11 +203,13 @@ public class FiltersBox extends VBox {
     }
 
     public LocalDateTime getEndDate() {
-        return endDate;
+        LocalDateTime endDateTime = endDatePicker.getValue().atTime(23,59,59);
+        return endDateTime;
     }
 
     public LocalDateTime getStartDate() {
-        return startDate;
+        LocalDateTime startDateTime = startDatePicker.getValue().atTime(0,0,0);
+        return startDateTime;
     }
 
     public String getContext() {

@@ -240,23 +240,20 @@ public class importFilestoDatabase {
 
     public static void main (String[] args){
         importFilestoDatabase object = new importFilestoDatabase();
-        object.createDataTables();
-        var hi = object.getCSVData("src/main/resources/testCSV/impression_log2month.csv"); //change to any of the other ones
+        List<List<String>> hi = object.getCSVData("/Users/flynn/Downloads/2_month_campaign 3/impression_log.csv"); //change to any of the other ones
 
 
-
-
-        LocalTime userStart = LocalTime.now();
-        object.insertDataUserProfiles("Try6", hi);
-        LocalTime userEnd = LocalTime.now();
-
-
-        LocalTime start = LocalTime.now();
-        object.insertDataintoTables("Try6", "Impressions", hi);
-        LocalTime end = LocalTime.now();
-
-        System.out.println("Impressions time: " + start.until(end, ChronoUnit.SECONDS));
-        System.out.println("User profiles time: " + userStart.until(userEnd, ChronoUnit.SECONDS));
+//        LocalTime userStart = LocalTime.now();
+//        object.insertDataUserProfiles("Try6", hi);
+//        LocalTime userEnd = LocalTime.now();
+//
+//
+//        LocalTime start = LocalTime.now();
+//        object.insertDataintoTables("Try6", "Impressions", hi);
+//        LocalTime end = LocalTime.now();
+//
+//        System.out.println("Impressions time: " + start.until(end, ChronoUnit.SECONDS));
+//        System.out.println("User profiles time: " + userStart.until(userEnd, ChronoUnit.SECONDS));
 
 
 

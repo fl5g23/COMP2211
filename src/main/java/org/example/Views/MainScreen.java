@@ -7,7 +7,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.*;
-
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -48,10 +47,8 @@ public class MainScreen {
   private ChartPanel histogramPanel;
   private ClickCostHistogram clickCostHistogram = new ClickCostHistogram();
   private boolean isClickByCost = true; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
-  private boolean isDataDownloaded = false; // Track if data is available for histograms
   private UIController controller; // Reference to the controller
   Boolean firstGraphGeneration = true; //solves bug with chart generation
-  String lastGranularity = "";
   private LocalDate startDate;
   private LocalDate endDate;
 
@@ -325,7 +322,7 @@ public class MainScreen {
               showAlert(null, "calendardateswrongorder");
             } else {
 
-              // Update the bounce rate calculation
+              filtersPanel.setMetric(metricDropdown.getValue());
               controller.queryStatistics(filtersPanel);
               controller.updateStatistics(selectedCampaign.getName());
               controller.generateGraph(filtersPanel);
@@ -521,7 +518,6 @@ public class MainScreen {
     cpmValue.setText(String.format("%,.2f", cpm));
     totalCostValue.setText(String.format("£" + "%,.2f", totalCost));
 
-    isDataDownloaded = true;
   }
 
   /**

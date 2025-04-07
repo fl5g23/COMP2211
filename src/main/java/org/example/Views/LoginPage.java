@@ -21,37 +21,47 @@ public class LoginPage {
     }
 
     public void show(Stage primaryStage) {
-        // Create UI elements
         AnchorPane root = new AnchorPane();
-        root.setPrefSize(385, 294);
+        root.setPrefSize(414, 322); // Match FXML dimensions
 
+        double leftMargin = 33;
+        double textFieldWidth = 414 - (2 * leftMargin);
+        double labelYOffset = 20;
+        double fieldHeight = 26;
+
+        // Title Label
         Label titleLabel = new Label("Ad Campaign Dashboard");
         titleLabel.setFont(new Font(21));
-        titleLabel.setLayoutX(85);
-        titleLabel.setLayoutY(18);
+        titleLabel.setLayoutX(95);
+        titleLabel.setLayoutY(30);
 
+        // Username Label
         Label usernameLabel = new Label("Username");
-        usernameLabel.setLayoutX(14);
-        usernameLabel.setLayoutY(73);
+        usernameLabel.setLayoutX(leftMargin);
+        usernameLabel.setLayoutY(80);
 
-        Label passwordLabel = new Label("Password");
-        passwordLabel.setLayoutX(14);
-        passwordLabel.setLayoutY(152);
-
+        // Username Field
         TextField usernameField = new TextField();
-        usernameField.setLayoutX(14);
-        usernameField.setLayoutY(100);
-        usernameField.setPrefSize(161, 26);
+        usernameField.setLayoutX(leftMargin);
+        usernameField.setLayoutY(usernameLabel.getLayoutY() + labelYOffset);
+        usernameField.setPrefSize(textFieldWidth, fieldHeight);
 
-        TextField passwordField = new PasswordField(); // Changed to PasswordField for security
-        passwordField.setLayoutX(14);
-        passwordField.setLayoutY(178);
-        passwordField.setPrefSize(161, 26);
+        // Password Label
+        Label passwordLabel = new Label("Password");
+        passwordLabel.setLayoutX(leftMargin);
+        passwordLabel.setLayoutY(usernameField.getLayoutY() + 50);
 
+        // Password Field
+        PasswordField passwordField = new PasswordField();
+        passwordField.setLayoutX(leftMargin);
+        passwordField.setLayoutY(passwordLabel.getLayoutY() + labelYOffset);
+        passwordField.setPrefSize(textFieldWidth, fieldHeight);
+
+        // Register Button
         Button registerButton = new Button("Register");
-        registerButton.setLayoutX(287);
-        registerButton.setLayoutY(100);
-        registerButton.setPrefSize(74, 26);
+        registerButton.setPrefSize(100, 30);
+        registerButton.setLayoutX(95);
+        registerButton.setLayoutY(passwordField.getLayoutY() + 60);
         registerButton.setOnAction(
                 e -> {
                     if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
@@ -61,20 +71,22 @@ public class LoginPage {
                     }
                 });
 
+        // Login Button
         Button loginButton = new Button("Login");
-        loginButton.setLayoutX(287);
-        loginButton.setLayoutY(178);
-        loginButton.setPrefSize(74, 26);
+        loginButton.setPrefSize(100, 30);
+        loginButton.setLayoutX(220);
+        loginButton.setLayoutY(passwordField.getLayoutY() + 60);
         loginButton.setOnAction(e -> {
             if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
                 controller.showAlert(null, "userpwdempty");
             } else {
                 loginUser(usernameField.getText(), passwordField.getText());
+                controller.setup();
             }
         });
 
-        // Add elements to the layout
-        root.getChildren().addAll(titleLabel, usernameLabel, passwordLabel, usernameField, passwordField, registerButton, loginButton);
+        // Add all nodes
+        root.getChildren().addAll(titleLabel, usernameLabel, usernameField, passwordLabel, passwordField, registerButton, loginButton);
 
         // Set up scene and stage
         primaryStage.setTitle("Login");
