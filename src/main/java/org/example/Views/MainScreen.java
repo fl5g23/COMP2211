@@ -1,5 +1,10 @@
 package org.example.Views;
 
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Chunk;
+import com.itextpdf.text.Font;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.awt.Color;
@@ -24,6 +29,12 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Image;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.File;
 
@@ -38,6 +49,8 @@ import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 
 public class MainScreen {
+  private List<Double> lastClickCosts;
+  private Map<String, Integer> lastClickByTime;
 
   private final Stage primaryStage;
   private MenuButton campaignMenuButton; // Replaces the title label after a campaign is added
@@ -46,9 +59,10 @@ public class MainScreen {
   private StackPane chartContainer;
   private ChartPanel histogramPanel;
   private ClickCostHistogram clickCostHistogram = new ClickCostHistogram();
-  private boolean isClickByCost = true; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
+  private boolean isClickByCost =
+      true; // Track histogram type (true = Clicks by Cost, false = Clicks by Time)
   private UIController controller; // Reference to the controller
-  Boolean firstGraphGeneration = true; //solves bug with chart generation
+  Boolean firstGraphGeneration = true; // solves bug with chart generation
   private LocalDate startDate;
   private LocalDate endDate;
 
@@ -77,7 +91,8 @@ public class MainScreen {
   Label totalCostValue = new Label("");
   Button toggleChartBtn = new Button("Switch to Histogram");
   FiltersBox filtersPanel;
-
+  private Map<String, String> currentFilterSummary;
+  private Map<String, String> currentMetricsSummary;
 
   private ToggleButton toggleHistogramTypeBtn = new ToggleButton("Clicks by time");
   ComboBox<String> metricDropdown = new ComboBox<>();
@@ -108,7 +123,8 @@ public class MainScreen {
     title.setOnMouseClicked(e -> controller.openAddCampaignDialog(title, topBar)); // Use controller
 
     Button logoutButton = new Button("Logout");
-    logoutButton.setStyle("-fx-background-color: #d9534f; -fx-text-fill: white; -fx-font-weight: bold;");
+    logoutButton.setStyle(
+        "-fx-background-color: #d9534f; -fx-text-fill: white; -fx-font-weight: bold;");
     logoutButton.setOnAction(e -> controller.logout()); // Delegate to controller
 
     toggleChartBtn.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
@@ -116,7 +132,54 @@ public class MainScreen {
     toggleHistogramTypeBtn.setVisible(false);
 
     ComboBox<String> exportSelectBox = new ComboBox<>();
-    exportSelectBox.promptTextProperty().set("Export Format");
+    exportSelectBox.getItems().addAll("PDF", "CSV","Choose format"); // CSV for later
+    exportSelectBox.setPromptText("Export Format");
+    exportSelectBox.setOnAction(
+        e -> {
+          String format = exportSelectBox.getValue();
+          if ("Choose format".equals(format)) {
+            System.out.println("qq");
+          } else {
+            Campaign selectedCampaign = getSelectedCampaign();
+            if (selectedCampaign != null) {
+              filtersPanel.setMetric(metricDropdown.getValue());
+              currentFilterSummary = controller.extractFilterSummary(filtersPanel);
+              currentMetricsSummary = controller.extractMetrics(selectedCampaign.getName());
+
+              if ("PDF".equals(format)) {
+                LineChart<String, Number> chart = getLineChart();
+                String campaignName = selectedCampaign.getName();
+
+                // Generate both histograms on the fly for export
+                List<Double> costList = controller.getClickCostData(filtersPanel);
+                Map<String, Integer> clickTimeMap = controller.getClickByTimeData(filtersPanel);
+
+                JFreeChart costHistogram = new ClickCostHistogram(costList).getChart();
+                JFreeChart timeHistogram = new ClickCostHistogram(clickTimeMap).getChart();
+
+                exportDashboardAsPDF(
+                    chart,
+                    costHistogram,
+                    timeHistogram,
+                    currentFilterSummary,
+                    currentMetricsSummary,
+                    campaignName);
+              }
+              if ("CSV".equals(format)) {
+                if (selectedCampaign != null) {
+                  Map<String, Map<String, Integer>> fullMetrics =
+                      controller.getAllMetricsOverTime(filtersPanel);
+                  controller.exportTimeSeriesAsCSV(fullMetrics, selectedCampaign.getName());
+                } else {
+                  showAlert(null, "exportingbeforecampaignloaded");
+                }
+              }
+
+            } else {
+              showAlert(null, "exportingbeforecampaignloaded");
+            }
+          }
+        });
 
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
@@ -130,33 +193,44 @@ public class MainScreen {
             } else {
               exportHistogramAsImage(); // Export JFreeChart Histogram
             }
-          }else{
+          } else {
             showAlert(null, "exportingbeforecampaignloaded");
           }
         });
 
     Button compareGraphButton = new Button("Compare Graphs");
-    compareGraphButton.setOnAction(e -> {
-      Campaign selectedCampaign = getSelectedCampaign();
-      if (selectedCampaign != null){
-        CompareGraphsView compareGraphsView = new CompareGraphsView(primaryStage, controller, startDate, endDate, selectedCampaign);
-        compareGraphsView.show();
-      } else {
-        showAlert(null, "comparingbeforecampaignloaded");
-      }
-    });
-
+    compareGraphButton.setOnAction(
+        e -> {
+          Campaign selectedCampaign = getSelectedCampaign();
+          if (selectedCampaign != null) {
+            CompareGraphsView compareGraphsView =
+                new CompareGraphsView(
+                    primaryStage, controller, startDate, endDate, selectedCampaign);
+            compareGraphsView.show();
+          } else {
+            showAlert(null, "comparingbeforecampaignloaded");
+          }
+        });
 
     Button authoriseUsersButton = new Button("Authorise Users");
     authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
 
-    topBar.getChildren().addAll(title, logoutButton, toggleChartBtn, exportSelectBox, exportButton, compareGraphButton, toggleHistogramTypeBtn, authoriseUsersButton);
+    topBar
+        .getChildren()
+        .addAll(
+            title,
+            logoutButton,
+            toggleChartBtn,
+            exportSelectBox,
+            exportButton,
+            compareGraphButton,
+            toggleHistogramTypeBtn,
+            authoriseUsersButton);
     topBar.setSpacing(20);
 
-
-    if (role.equals("Admin")){
+    if (role.equals("Admin")) {
       authoriseUsersButton.setVisible(true);
-    }else{
+    } else {
       authoriseUsersButton.setVisible(false);
     }
 
@@ -176,34 +250,34 @@ public class MainScreen {
     metricsPanel.getChildren().addAll(metricsLabels, metricsValues);
 
     metricsLabels
-            .getChildren()
-            .addAll(
-                    keyMetricsTitle,
-                    impressionsLabel,
-                    clicksLabel,
-                    uniquesLabel,
-                    conversionsLabel,
-                    bounceRateLabel,
-                    ctrLabel,
-                    cpaLabel,
-                    cpcLabel,
-                    cpmLabel,
-                    totalCostLabel);
+        .getChildren()
+        .addAll(
+            keyMetricsTitle,
+            impressionsLabel,
+            clicksLabel,
+            uniquesLabel,
+            conversionsLabel,
+            bounceRateLabel,
+            ctrLabel,
+            cpaLabel,
+            cpcLabel,
+            cpmLabel,
+            totalCostLabel);
 
     metricsValues
-            .getChildren()
-            .addAll(
-                    keyMetricsValue,
-                    impressionsValue,
-                    clicksValue,
-                    uniquesValue,
-                    conversionsValue,
-                    bounceRateValue,
-                    ctrValue,
-                    cpaValue,
-                    cpcValue,
-                    cpmValue,
-                    totalCostValue);
+        .getChildren()
+        .addAll(
+            keyMetricsValue,
+            impressionsValue,
+            clicksValue,
+            uniquesValue,
+            conversionsValue,
+            bounceRateValue,
+            ctrValue,
+            cpaValue,
+            cpcValue,
+            cpmValue,
+            totalCostValue);
 
     // Add tooltips
     setupTooltips();
@@ -265,7 +339,8 @@ public class MainScreen {
     Tooltip uniquesTooltip = new Tooltip("Unique users who viewed the ad.");
     Tooltip.install(uniquesLabel, uniquesTooltip);
 
-    Tooltip conversionsTooltip = new Tooltip("Total successful actions taken after clicking the ad.");
+    Tooltip conversionsTooltip =
+        new Tooltip("Total successful actions taken after clicking the ad.");
     Tooltip.install(conversionsLabel, conversionsTooltip);
 
     Tooltip bounceRateTooltip = new Tooltip("Percentage of visitors who left without interaction.");
@@ -291,7 +366,7 @@ public class MainScreen {
    * Create the filters panel
    */
   private VBox createFiltersPanel() {
-    filtersPanel = new FiltersBox(null, null, null, null, 132,  500);
+    filtersPanel = new FiltersBox(null, null, null, null, 132, 500);
 
     // Filters title
     Label filterLabel = new Label("Filters");
@@ -326,23 +401,30 @@ public class MainScreen {
               controller.queryStatistics(filtersPanel);
               controller.updateStatistics(selectedCampaign.getName());
               controller.generateGraph(filtersPanel);
+
               controller.updateBounceRate(
                   selectedCampaign.getName(), filtersPanel.getBounceValue());
+              currentFilterSummary = controller.extractFilterSummary(filtersPanel);
+              currentMetricsSummary = controller.extractMetrics(selectedCampaign.getName());
+              if (!isClickByCost) controller.updateHistogram(filtersPanel, false);
+              else {
+                controller.updateHistogram(filtersPanel, true);
+              }
             }
           }
         });
 
     // Extract existing children
-    ObservableList<Node> originalChildren = FXCollections.observableArrayList(filtersPanel.getChildren());
+    ObservableList<Node> originalChildren =
+        FXCollections.observableArrayList(filtersPanel.getChildren());
 
-// Create your returnBox
+    // Create your returnBox
     VBox returnBox = new VBox();
     returnBox.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
     returnBox.setPrefSize(132, 500);
     returnBox.setAlignment(Pos.CENTER);
 
-
-// Add in desired order
+    // Add in desired order
     returnBox.getChildren().add(metricBox); // MetricBox (second)
     for (int i = 0; i < originalChildren.size(); i++) {
       returnBox.getChildren().add(originalChildren.get(i));
@@ -358,10 +440,9 @@ public class MainScreen {
       for (Campaign campaign : controller.getCampaigns()) {
         if (campaign.getName().equals(campaignMenuButton.getText())) {
           return campaign;
-
         }
-      }    metricDropdown.setValue("Impressions");
-
+      }
+      metricDropdown.setValue("Impressions");
     }
     return null;
   }
@@ -370,37 +451,39 @@ public class MainScreen {
    * Configure the chart toggle button behavior
    */
   private void setupChartToggleButton() {
-    toggleChartBtn.setOnAction(e -> {
-      Campaign selectedCampaign = getSelectedCampaign();
-      if (selectedCampaign == null) return;
+    toggleChartBtn.setOnAction(
+        e -> {
+          Campaign selectedCampaign = getSelectedCampaign();
+          if (selectedCampaign == null) return;
+          if (lineChart.isVisible()) {
+            isClickByCost = true;
+            controller.updateHistogram(filtersPanel, true); // Only show cost by default
+            lineChart.setVisible(false);
+            swingNode.setVisible(true);
+            toggleChartBtn.setText("Switch to Performance Chart");
+            toggleHistogramTypeBtn.setVisible(true);
+            toggleHistogramTypeBtn.setText("Clicks by Time");
 
-      if (lineChart.isVisible()) {
-        controller.updateHistogram(selectedCampaign.getName(), isClickByCost);
-        lineChart.setVisible(false);
-        swingNode.setVisible(true);
-        toggleChartBtn.setText("Switch to Performance Chart");
-        toggleHistogramTypeBtn.setVisible(true);
-        toggleHistogramTypeBtn.setText("Clicks by Time");
-        isClickByCost = true;
-      } else {
-        swingNode.setVisible(false);
-        lineChart.setVisible(true);
-        toggleChartBtn.setText("Switch to Histogram");
-        toggleHistogramTypeBtn.setVisible(false);
-        toggleHistogramTypeBtn.setText("Clicks by Time");
-        isClickByCost = true;
-      }
-    });
+          } else {
+            swingNode.setVisible(false);
+            lineChart.setVisible(true);
+            toggleChartBtn.setText("Switch to Histogram");
+            toggleHistogramTypeBtn.setVisible(false);
+            toggleHistogramTypeBtn.setText("Clicks by Time");
+            isClickByCost = true;
+          }
+        });
 
-    toggleHistogramTypeBtn.setOnAction(e -> {
-      isClickByCost = !isClickByCost;
-      toggleHistogramTypeBtn.setText(isClickByCost ? "Clicks by Time" : "Clicks by Cost");
+    toggleHistogramTypeBtn.setOnAction(
+        e -> {
+          isClickByCost = !isClickByCost;
+          toggleHistogramTypeBtn.setText(isClickByCost ? "Clicks by Time" : "Clicks by Cost");
 
-      Campaign selectedCampaign = getSelectedCampaign();
-      if (selectedCampaign != null) {
-        controller.updateHistogram(selectedCampaign.getName(), isClickByCost);
-      }
-    });
+          Campaign selectedCampaign = getSelectedCampaign();
+          if (selectedCampaign != null) {
+            controller.updateHistogram(filtersPanel, isClickByCost);
+          }
+        });
   }
 
   /**
@@ -417,40 +500,39 @@ public class MainScreen {
       alert.setTitle("Error");
       alert.setHeaderText("Campaign name wrong");
       alert.setContentText("Campaign name already exists");
-    }else if (type.equals("userpwdempty")){
+    } else if (type.equals("userpwdempty")) {
       alert.setTitle("Error");
       alert.setHeaderText("Username or password invalid");
       alert.setContentText("The username and password field cannot be empty");
-    } else if (type.equals("usernotexist")){
+    } else if (type.equals("usernotexist")) {
       alert.setTitle("Error");
       alert.setHeaderText("Username or password invalid");
       alert.setContentText("The username and password combination does not exist");
-    }else if (type.equals("notauthorised")){
+    } else if (type.equals("notauthorised")) {
       alert.setTitle("Error");
       alert.setHeaderText("Not authorised");
       alert.setContentText("Your account must be authorised by the admin");
-    } else if (type.equals("usernamealreadyexists")){
+    } else if (type.equals("usernamealreadyexists")) {
       alert.setTitle("Error");
       alert.setHeaderText("Username already exists");
       alert.setContentText("This username is already registered");
-    }else if(type.equals("passwordwrong")){
+    } else if (type.equals("passwordwrong")) {
       alert.setTitle("Error");
       alert.setHeaderText("Password invalid");
       alert.setContentText("Password is incorrect");
-    } else if (type.equals("calendardateswrongorder")){
+    } else if (type.equals("calendardateswrongorder")) {
       alert.setTitle("Error");
       alert.setHeaderText("Dates wrong order");
       alert.setContentText("The starting date must come before the ending date");
-    }else if (type.equals("comparingbeforecampaignloaded")){
+    } else if (type.equals("comparingbeforecampaignloaded")) {
       alert.setTitle("Error");
       alert.setHeaderText("Compare Graphs Failed");
       alert.setContentText("A campaign must be loaded before you compare graphs");
-    }else if (type.equals("exportingbeforecampaignloaded")){
+    } else if (type.equals("exportingbeforecampaignloaded")) {
       alert.setTitle("Error");
       alert.setHeaderText("Export Graph failed");
       alert.setContentText("A campaign must be loaded before you export");
-    }
-    else {
+    } else {
       alert.setTitle("Error");
       alert.setHeaderText("Wrong format");
       alert.setContentText(file.getName() + " has wrong format for " + type + " log file");
@@ -459,10 +541,9 @@ public class MainScreen {
     alert.showAndWait();
   }
 
-  public void changeSelectedCampaign(Campaign campaign){
+  public void changeSelectedCampaign(Campaign campaign) {
     campaignMenuButton.setText(campaign.getName());
     metricDropdown.setValue("Impressions");
-
   }
 
   /**
@@ -482,10 +563,11 @@ public class MainScreen {
     // Add the campaign names to the menu
     for (Campaign campaignselected : controller.getCampaigns()) {
       MenuItem item = new MenuItem(campaignselected.getName());
-      item.setOnAction(e -> {
-        controller.selectCampaign(campaignselected);
-        changeSelectedCampaign(campaignselected);
-      });
+      item.setOnAction(
+          e -> {
+            controller.selectCampaign(campaignselected);
+            changeSelectedCampaign(campaignselected);
+          });
       campaignMenuButton.getItems().add(item);
     }
 
@@ -499,14 +581,19 @@ public class MainScreen {
     if (index != -1) {
       topBar.getChildren().set(index, campaignMenuButton);
     }
-
   }
 
   /**
    * Update metrics display with new values
    */
-  public void updateMetricsDisplay(Map<String, Double> coreMetrics, double bounceRate,
-                                   double ctr, double cpa, double cpc, double cpm, double totalCost) {
+  public void updateMetricsDisplay(
+      Map<String, Double> coreMetrics,
+      double bounceRate,
+      double ctr,
+      double cpa,
+      double cpc,
+      double cpm,
+      double totalCost) {
     impressionsValue.setText(String.format("%,.0f", coreMetrics.getOrDefault("Impressions", 0.0)));
     clicksValue.setText(String.format("%,.0f", coreMetrics.getOrDefault("Clicks", 0.0)));
     uniquesValue.setText(String.format("%,.0f", coreMetrics.getOrDefault("Uniques", 0.0)));
@@ -517,7 +604,6 @@ public class MainScreen {
     cpcValue.setText(String.format("%,.2f", cpc));
     cpmValue.setText(String.format("%,.2f", cpm));
     totalCostValue.setText(String.format("£" + "%,.2f", totalCost));
-
   }
 
   /**
@@ -530,7 +616,10 @@ public class MainScreen {
   /**
    * Update the performance graph with new data
    */
-  public void updatePerformanceGraph(Map<String, Map<String, Integer>> metricsOverTime, String selectedMetric, String granularity) {
+  public void updatePerformanceGraph(
+      Map<String, Map<String, Integer>> metricsOverTime,
+      String selectedMetric,
+      String granularity) {
     System.out.println("Data received in UI: " + metricsOverTime);
 
     //    if (!lastGranularity.equals(granularity)){
@@ -558,11 +647,10 @@ public class MainScreen {
   /**
    * Helper to add series to the line chart
    */
-  private void addSeriesToChart(Map<String, Integer> dataMap, String metricName, double scaleFactor) {
-      XYChart.Series<String, Number> series = new XYChart.Series<>();
-      series.setName(metricName);
-
-
+  private void addSeriesToChart(
+      Map<String, Integer> dataMap, String metricName, double scaleFactor) {
+    XYChart.Series<String, Number> series = new XYChart.Series<>();
+    series.setName(metricName);
 
     List<String> sortedDates = new ArrayList<>(dataMap.keySet());
     sortedDates.sort(Comparator.naturalOrder());
@@ -572,26 +660,32 @@ public class MainScreen {
       XYChart.Data<String, Number> dataPoint = new XYChart.Data<>(date, yValue);
 
       // Add tooltip showing raw and scaled values
-      Tooltip tooltip = new Tooltip(metricName + "\nDate: " + date +
-          "\nRaw: " + dataMap.get(date) + "\nScaled: " + yValue);
+      Tooltip tooltip =
+          new Tooltip(
+              metricName
+                  + "\nDate: "
+                  + date
+                  + "\nRaw: "
+                  + dataMap.get(date)
+                  + "\nScaled: "
+                  + yValue);
       Platform.runLater(() -> Tooltip.install(dataPoint.getNode(), tooltip));
 
       series.getData().add(dataPoint);
     }
 
-
     Platform.runLater(() -> lineChart.getData().add(series));
   }
-
 
   /**
    * Update the histogram for click costs
    */
   public void updateClickCostHistogram(List<Double> clickCosts) {
     ClickCostHistogram histogram = new ClickCostHistogram(clickCosts);
-    currentHistogramChart = histogram.getChart();  // ✅ Store for exporting
+    currentHistogramChart = histogram.getChart(); //  Store for exporting
     ChartPanel newHistogramPanel = new ChartPanel(currentHistogramChart);
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
+    this.lastClickCosts = clickCosts;
   }
 
   /**
@@ -599,31 +693,30 @@ public class MainScreen {
    */
   public void updateClickTimeHistogram(Map<String, Integer> clicksByDate) {
     ClickCostHistogram histogram = new ClickCostHistogram(clicksByDate);
-    currentHistogramChart = histogram.getChart();  //  Store for exporting
+    currentHistogramChart = histogram.getChart(); //  Store for exporting
     ChartPanel newHistogramPanel = new ChartPanel(currentHistogramChart);
     Platform.runLater(() -> swingNode.setContent(newHistogramPanel));
+    this.lastClickByTime = clicksByDate;
   }
-
-
 
   // Add this to your main application class where you set up the primary stage
   private void setupCloseHandler(Stage primaryStage) {
-    primaryStage.setOnCloseRequest(event -> {
-      controller.closeAppActions();
-    });
+    primaryStage.setOnCloseRequest(
+        event -> {
+          controller.closeAppActions();
+        });
   }
 
-  public void setFirstGenerationFilters(LocalDateTime startdatetime, LocalDateTime enddatetime, String campaignName){
+  public void setFirstGenerationFilters(
+      LocalDateTime startdatetime, LocalDateTime enddatetime, String campaignName) {
     metricDropdown.setValue("Impressions");
 
-     startDate = startdatetime.toLocalDate();
-     endDate = enddatetime.toLocalDate();
+    startDate = startdatetime.toLocalDate();
+    endDate = enddatetime.toLocalDate();
     filtersPanel.selectFirstGenerationFilters(startDate, endDate, campaignName);
   }
 
-
   public void exportChartWithDialog(LineChart<String, Number> chart) {
-    // Open FileChooser Dialog
     FileChooser fileChooser = new FileChooser();
     fileChooser.setTitle("Save Chart As Image");
 
@@ -631,7 +724,6 @@ public class MainScreen {
     fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image", "*.png"));
     fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JPEG Image", "*.jpg"));
 
-    // Show Save Dialog
     File file = fileChooser.showSaveDialog(null);
 
     if (file != null) {
@@ -648,18 +740,18 @@ public class MainScreen {
     String fileName = file.getName().toLowerCase();
     String format = fileName.endsWith(".jpg") ? "jpg" : "png";
 
-    // If saving as JPG, remove transparency by drawing on a white background
     if (format.equals("jpg")) {
-      BufferedImage whiteBackgroundImage = new BufferedImage(
-          bufferedImage.getWidth(), bufferedImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+      BufferedImage whiteBackgroundImage =
+          new BufferedImage(
+              bufferedImage.getWidth(), bufferedImage.getHeight(), BufferedImage.TYPE_INT_RGB);
 
       Graphics2D g2d = whiteBackgroundImage.createGraphics();
-      g2d.setColor(Color.WHITE);  // Set background color to white
+      g2d.setColor(Color.WHITE);
       g2d.fillRect(0, 0, whiteBackgroundImage.getWidth(), whiteBackgroundImage.getHeight());
       g2d.drawImage(bufferedImage, 0, 0, null);
       g2d.dispose();
 
-      bufferedImage = whiteBackgroundImage;  // Use the new image
+      bufferedImage = whiteBackgroundImage;
     }
 
     try {
@@ -690,4 +782,158 @@ public class MainScreen {
       }
     }
   }
+
+
+  public LineChart<String, Number> getLineChart() {
+    return lineChart;
+  }
+
+  public File exportChartImageToTempFile(LineChart<String, Number> chart) throws IOException {
+    // Ensure chart is visible for snapshot
+    boolean wasVisible = chart.isVisible();
+    Platform.runLater(() -> chart.setVisible(true));
+
+    // Waiting for UI update
+    try {
+      Thread.sleep(200);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+
+    WritableImage image = chart.snapshot(null, null);
+    BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+
+    if (!wasVisible) {
+      Platform.runLater(() -> chart.setVisible(false));  // Restore visibility
+    }
+
+    File tempFile = File.createTempFile("linechart", ".png");
+    ImageIO.write(bufferedImage, "png", tempFile);
+    return tempFile;
+  }
+
+  public File exportHistogramToTempFile(JFreeChart chart) throws IOException {
+    if (chart == null) return null;
+
+    File tempFile = File.createTempFile("histogram", ".png");
+    ChartUtils.saveChartAsPNG(tempFile, chart, 800, 600);
+    return tempFile;
+  }
+  public void exportDashboardAsPDF(
+      LineChart<String, Number> chart,
+      JFreeChart costHistogram,
+      JFreeChart timeHistogram,
+      Map<String, String> filters,
+      Map<String, String> metrics,
+      String campaignName) {
+
+    try {
+      FileChooser fileChooser = new FileChooser();
+      fileChooser.setTitle("Save Dashboard as PDF");
+      fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF File", "*.pdf"));
+      File file = fileChooser.showSaveDialog(null);
+      if (file == null) return;
+
+      Document doc = new Document();
+      PdfWriter.getInstance(doc, new FileOutputStream(file));
+      doc.open();
+
+      Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
+      Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+      Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
+      Font italicFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 11, BaseColor.GRAY);
+
+      // Title
+      doc.add(new Paragraph("Campaign Dashboard Export", headerFont));
+      doc.add(Chunk.NEWLINE);
+      doc.add(new Paragraph("Campaign Name: " + campaignName, sectionFont));
+      doc.add(Chunk.NEWLINE);
+
+      // Filters
+      doc.add(new Paragraph("Applied Filters:", sectionFont));
+      for (Map.Entry<String, String> entry : filters.entrySet()) {
+        String label = String.format(" • %-15s: %s", entry.getKey(), entry.getValue());
+        doc.add(new Paragraph(label, bodyFont));
+      }
+      doc.add(Chunk.NEWLINE);
+
+      // Metrics
+      doc.add(new Paragraph("Campaign Metrics:", sectionFont));
+      for (Map.Entry<String, String> entry : metrics.entrySet()) {
+        String label = String.format(" • %-15s: %s", entry.getKey(), entry.getValue());
+        doc.add(new Paragraph(label, bodyFont));
+      }
+      doc.newPage(); //  Move to Page 2
+
+      // Save visibility state
+      boolean wasChartVisible = lineChart.isVisible();
+      boolean wasHistogramVisible = swingNode.isVisible();
+
+      if (!wasChartVisible) {
+        lineChart.setVisible(true);
+        swingNode.setVisible(false);
+        lineChart.applyCss();
+        lineChart.layout();
+      }
+
+      File chartImgFile = exportChartImageToTempFile(chart);
+
+      // Restore visibility
+      lineChart.setVisible(wasChartVisible);
+      swingNode.setVisible(wasHistogramVisible);
+
+      // Line Chart
+      if (chartImgFile != null && chartImgFile.exists()) {
+        doc.add(new Paragraph("Line Chart:", sectionFont));
+        String selectedMetric = filters.getOrDefault("Metric", "Unknown Metric");
+        doc.add(new Paragraph("This graph shows: " + selectedMetric, italicFont));
+        doc.add(Chunk.NEWLINE);
+
+        Image chartImg = Image.getInstance(chartImgFile.getAbsolutePath());
+        chartImg.scaleToFit(500, 300);
+        chartImg.setAlignment(Image.ALIGN_CENTER);
+        doc.add(chartImg);
+        doc.add(Chunk.NEWLINE);
+        chartImgFile.delete();
+      }
+
+      // Cost Histogram
+      File costImgFile = exportHistogramToTempFile(costHistogram);
+      if (costImgFile != null && costImgFile.exists()) {
+        doc.add(new Paragraph("Click Cost Histogram:", sectionFont));
+        doc.add(new Paragraph("This chart shows the distribution of click costs.", italicFont));
+        doc.add(Chunk.NEWLINE);
+
+        Image costImg = Image.getInstance(costImgFile.getAbsolutePath());
+        costImg.scaleToFit(500, 300);
+        costImg.setAlignment(Image.ALIGN_CENTER);
+        doc.add(costImg);
+        doc.add(Chunk.NEWLINE);
+        costImgFile.delete();
+      }
+
+      // Click Time Histogram
+      File timeImgFile = exportHistogramToTempFile(timeHistogram);
+      if (timeImgFile != null && timeImgFile.exists()) {
+        doc.add(new Paragraph("Clicks Over Time Histogram:", sectionFont));
+        doc.add(new Paragraph("This chart shows how click activity was distributed by time.", italicFont));
+        doc.add(Chunk.NEWLINE);
+
+        Image timeImg = Image.getInstance(timeImgFile.getAbsolutePath());
+        timeImg.scaleToFit(500, 300);
+        timeImg.setAlignment(Image.ALIGN_CENTER);
+        doc.add(timeImg);
+        doc.add(Chunk.NEWLINE);
+        timeImgFile.delete();
+      }
+
+      doc.close();
+      System.out.println("PDF exported successfully: " + file.getAbsolutePath());
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+
 }

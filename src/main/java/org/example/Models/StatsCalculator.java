@@ -315,26 +315,47 @@ public class StatsCalculator {
    * Returns all the costs of clicks in ascending order in a List
    * Used for click cost histogram
    */
-  public List<Double> getCostsList(String campaignname) {
-    // Updated SQL query to filter by campaignname
-    String costsListSQL = "SELECT Click_Cost FROM Clicks WHERE Campaign = ? ORDER BY Click_Cost ASC;";
+  public List<Double> getCostsList(FiltersBox filters) {
     List<Double> costsList = new ArrayList<>();
+    StringBuilder sql = new StringBuilder(
+        "SELECT c.Click_Cost FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?"
+    );
 
-    try {
-      // Execute SQL query with campaignname as parameter
-      ResultSet rs = executeSQL(costsListSQL, Arrays.asList(campaignname));
+    List<String> params = new ArrayList<>();
+    params.add(filters.getCampaignName());
+    sql.append(" AND c.Date BETWEEN ? AND ?");
+    params.add(filters.getStartDate().toString().replace("T", " "));
+    params.add(filters.getEndDate().toString().replace("T", " "));
 
-      // Process result set
+    if (filters.getGender() != null && !"All".equals(filters.getGender())) {
+      sql.append(" AND u.Gender = ?");
+      params.add(filters.getGender());
+    }
+    if (filters.getAge() != null && !"All".equals(filters.getAge())) {
+      sql.append(" AND u.Age = ?");
+      params.add(filters.getAge());
+    }
+    if (filters.getIncome() != null && !"All".equals(filters.getIncome())) {
+      sql.append(" AND u.Income = ?");
+      params.add(filters.getIncome());
+    }
+    if (filters.getContext() != null && !"All".equals(filters.getContext())) {
+      sql.append(" AND u.Context = ?");
+      params.add(filters.getContext());
+    }
+
+
+    try (ResultSet rs = executeSQL(sql.toString(), params)) {
       while (rs != null && rs.next()) {
         costsList.add(rs.getDouble("Click_Cost"));
       }
-      if (rs != null) rs.close();
+
     } catch (SQLException e) {
       e.printStackTrace();
     }
-
     return costsList;
   }
+
 
   /**
    * Executes SQL Statements on the database
@@ -645,26 +666,66 @@ public class StatsCalculator {
 
 
 
-  public Map<String, Integer> getClicksOverTime(String campaignName) {
+  public Map<String, Integer> getClicksOverTime(FiltersBox filters) {
     Map<String, Integer> clicksOverTime = new TreeMap<>();
 
-    // SQL query to group clicks by day
-    String clicksByTimeSQL = "SELECT strftime('%Y-%m-%d', Date) AS Day, COUNT(*) FROM Clicks WHERE Campaign = ? GROUP BY Day ORDER BY Day;";
+    String granularity = filters.getGranularity();
+    String timeFormat;
+    System.out.println(granularity);
+    switch (granularity.toLowerCase()) {
+      case "hourly":
+        timeFormat = "%Y-%m-%d %H:00";
+        break;
+      case "weekly":
+        timeFormat = "%Y-W%W"; // Week number
+        break;
+      case "daily":
+      default:
+        timeFormat = "%Y-%m-%d";
+        break;
+    }
 
-    try (ResultSet rs = executeSQL(clicksByTimeSQL, List.of(campaignName))) {
+    StringBuilder sql = new StringBuilder(
+        "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(*) " +
+            "FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?"
+    );
+
+    List<String> params = new ArrayList<>();
+    params.add(filters.getCampaignName());
+    if (filters.getGender() != null && !"All".equals(filters.getGender())) {
+      sql.append(" AND u.Gender = ?");
+      params.add(filters.getGender());
+    }
+    if (filters.getAge() != null && !"All".equals(filters.getAge())) {
+      sql.append(" AND u.Age = ?");
+      params.add(filters.getAge());
+    }
+    if (filters.getIncome() != null && !"All".equals(filters.getIncome())) {
+      sql.append(" AND u.Income = ?");
+      params.add(filters.getIncome());
+    }
+    if (filters.getContext() != null && !"All".equals(filters.getContext())) {
+      sql.append(" AND u.Context = ?");
+      params.add(filters.getContext());
+    }
+    // Date range
+    sql.append(" AND c.Date BETWEEN ? AND ?");
+    params.add(filters.getStartDate().toString().replace("T", " "));
+    params.add(filters.getEndDate().toString().replace("T", " "));
+
+    sql.append(" GROUP BY Time ORDER BY Time");
+
+    try (ResultSet rs = executeSQL(sql.toString(), params)) {
       while (rs != null && rs.next()) {
-        String day = rs.getString(1);  // Get date as YYYY-MM-DD
-        int clickCount = rs.getInt(2);  // Count of clicks on that day
-        clicksOverTime.put(day, clickCount);
+        String time = rs.getString("Time");
+        int count = rs.getInt(2);
+        clicksOverTime.put(time, count);
       }
     } catch (SQLException e) {
       e.printStackTrace();
     }
-
     return clicksOverTime;
-  }
-
-  public void closeAppActions() {
+  }  public void closeAppActions() {
     String url = "jdbc:sqlite:mainData.db";
 
     try (var conn = DriverManager.getConnection(url);
@@ -677,6 +738,68 @@ public class StatsCalculator {
     } catch (SQLException e) {
       System.err.println(e.getMessage());
     }
+
+  }
+  public Map<String, Map<String, Integer>> getAllMetricsOverTime(FiltersBox filterSettings) {
+    Map<String, Map<String, Integer>> metrics = new TreeMap<>();
+
+    String timeGranularity = filterSettings.getGranularity();
+    String bounceType = filterSettings.getBounceValue();
+
+    String timeFormat;
+    switch (timeGranularity.toLowerCase()) {
+      case "hourly":
+        timeFormat = "%Y-%m-%d %H:00";
+        break;
+      case "daily":
+        timeFormat = "%Y-%m-%d";
+        break;
+      case "weekly":
+        return getMetricsWeekly(filterSettings);
+      default:
+        timeFormat = "%Y-%m-%d";
+    }
+
+    List<String> metricTypes = List.of("Impressions", "Clicks", "Uniques", "Conversions", "Bounces");
+
+    for (String metric : metricTypes) {
+      String sql = "";
+      List<String> params = new ArrayList<>();
+      params.add(filterSettings.getCampaignName());
+
+      switch (metric) {
+        case "Impressions":
+          sql = "SELECT strftime('" + timeFormat + "', Date) AS Time, COUNT(*) FROM Impressions WHERE Campaign = ?" + impressionsFilterSQL;
+          break;
+        case "Clicks":
+          sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(*) FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?" + clicksFilterSQL;
+          break;
+        case "Uniques":
+          sql = "SELECT strftime('" + timeFormat + "', c.Date) AS Time, COUNT(DISTINCT c.ID) FROM Clicks c JOIN UserProfiles u ON c.ID = u.ID WHERE u.Campaign = ?" + clicksFilterSQL;
+          break;
+        case "Conversions":
+          sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Conversion = 'Yes' AND u.Campaign = ?" + serverFilterSQL;
+          break;
+        case "Bounces":
+          if (bounceType.equals("SinglePage")) {
+            sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Pages_Viewed = 1 AND u.Campaign = ?" + serverFilterSQL;
+          } else if (bounceType.equals("PageLeft")) {
+            sql = "SELECT strftime('" + timeFormat + "', s.Entry_Date) AS Time, COUNT(*) FROM Server s JOIN UserProfiles u ON s.ID = u.ID WHERE s.Exit_Date != 'n/a' AND s.Conversion = 'No' AND u.Campaign = ?" + serverFilterSQL;
+          }
+          break;
+      }
+
+      sql += " GROUP BY Time";
+      metrics.put(metric, new TreeMap<>());
+
+      try {
+        addDataToMap(metrics.get(metric), sql, params);
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
+    }
+
+    return metrics;
   }
 
 

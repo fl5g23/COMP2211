@@ -100,20 +100,20 @@ public class DataController {
     public Map<String, Map<String, Integer>> getMetricsOverTime(FiltersBox filterSettings) {
         return statsCalculator.getMetricsOverTime(filterSettings);
     }
-
+    public Map<String, Map<String, Integer>> getAllMetricsOverTime(FiltersBox filters) {
+        return statsCalculator.getAllMetricsOverTime(filters); // full data for CSV
+    }
     /**
      * Gets costs list for a campaign.
      */
-    public List<Double> getCostsList(String campaignName) {
-        return statsCalculator.getCostsList(campaignName);
+    public List<Double> getCostsList(FiltersBox filters) {
+        return statsCalculator.getCostsList(filters);
     }
 
-    /**
-     * Gets clicks over time for a campaign.
-     */
-    public Map<String, Integer> getClicksOverTime(String campaignName) {
-        return statsCalculator.getClicksOverTime(campaignName);
+    public Map<String, Integer> getClicksOverTime(FiltersBox filters) {
+        return statsCalculator.getClicksOverTime(filters);
     }
+
 
     /**
      * Gets CSV structure for a file.

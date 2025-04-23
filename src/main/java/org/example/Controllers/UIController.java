@@ -1,7 +1,13 @@
 package org.example.Controllers;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Set;
+import java.util.TreeSet;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.example.Models.Campaign;
 import org.example.Models.FiltersBox;
@@ -26,6 +32,7 @@ public class UIController {
     private List<Campaign> campaigns;
     private Campaign currentCampaign;
     private final Stage primaryStage;
+  Map<String, Map<String, Integer>> metricsOverTime;
 
     /**
      * Constructor initializing the controller with required components.
@@ -258,7 +265,6 @@ public class UIController {
    * @param filterSettings the name of the campaign
    */
   public void generateGraph(FiltersBox filterSettings) {
-    Map<String, Map<String, Integer>> metricsOverTime;
     metricsOverTime = dataController.getMetricsOverTime(filterSettings);
     mainScreen.updatePerformanceGraph(metricsOverTime, filterSettings.getMetric(), filterSettings.getGranularity());
   }
@@ -268,18 +274,18 @@ public class UIController {
   /**
          * Updates the histogram display.
          *
-         * @param campaignName the name of the campaign
          * @param isClickByCost flag indicating the type of histogram
          */
-    public void updateHistogram(String campaignName, boolean isClickByCost) {
-        if (isClickByCost) {
-            List<Double> clickCosts = dataController.getCostsList(campaignName);
-            mainScreen.updateClickCostHistogram(clickCosts);
-        } else {
-            Map<String, Integer> clicksByDate = dataController.getClicksOverTime(campaignName);
-            mainScreen.updateClickTimeHistogram(clicksByDate);
-        }
+  public void updateHistogram(FiltersBox filters, boolean isClickByCost) {
+    if (isClickByCost) {
+      List<Double> clickCosts = dataController.getCostsList(filters);
+      mainScreen.updateClickCostHistogram(clickCosts);
+    } else {
+      Map<String, Integer> clicksByDate = dataController.getClicksOverTime(filters);
+      mainScreen.updateClickTimeHistogram(clicksByDate);
     }
+  }
+
 
     /**
      * Checks if a file has the correct format for a specific log type.
@@ -376,7 +382,100 @@ public class UIController {
         dataController.closeAppActions();
     }
 
+  public Map<String, String> extractFilterSummary(FiltersBox filters) {
+    Map<String, String> map = new LinkedHashMap<>();
+    map.put("Gender", nullableToDisplay(filters.getGender()));
+    map.put("Age", nullableToDisplay(filters.getAge()));
+    map.put("Income", nullableToDisplay(filters.getIncome()));
+    map.put("Context", nullableToDisplay(filters.getContext()));
+    map.put("Bounce Type", filters.getBounceValue());
+    map.put("Date Range", filters.getStartDate() + " to " + filters.getEndDate());
+    map.put("time granularity ", filters.getGranularity());
+    map.put("Metric", filters.getMetric());
+
+    return map;
+  }
+
+  private String nullableToDisplay(String value) {
+    return (value == null || value.equals("null")) ? "All" : value;
+  }
+  public Map<String, String> extractMetrics(String campaignName) {
+    Map<String, String> metrics = new LinkedHashMap<>();
+    Map<String, Double> core = dataController.getCoreMetrics(campaignName);
+
+    metrics.put("Impressions", String.valueOf(core.getOrDefault("Impressions", 0.0)));
+    metrics.put("Clicks", String.valueOf(core.getOrDefault("Clicks", 0.0)));
+    metrics.put("Uniques", String.valueOf(core.getOrDefault("Uniques", 0.0)));
+    metrics.put("Bounces", String.valueOf(core.getOrDefault("Bounces", 0.0)));
+    metrics.put("Conversions", String.valueOf(core.getOrDefault("Conversions", 0.0)));
+
+    metrics.put("Bounce Rate", String.format("%.2f%%", dataController.calculateBounceRate(campaignName).getOrDefault("Page Rate", 0.0)));
+    metrics.put("CTR", String.format("%.2f%%", dataController.calculateCTR(campaignName)));
+    metrics.put("CPA", String.format("%.2f", dataController.calculateCPA(campaignName)));
+    metrics.put("CPC", String.format("%.2f", dataController.calculateCPC(campaignName)));
+    metrics.put("CPM", String.format("%.2f", dataController.calculateCPM(campaignName)));
+    metrics.put("Total Cost", String.format("%.2f", dataController.calculateTotalCost(campaignName)));
+
+    return metrics;
+  }
+
+  public void exportTimeSeriesAsCSV(Map<String, Map<String, Integer>> fullMetrics, String campaignName) {
+    try {
+      FileChooser fileChooser = new FileChooser();
+      fileChooser.setTitle("Save Metrics Over Time");
+      fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV File", "*.csv"));
+      File file = fileChooser.showSaveDialog(null);
+      if (file == null) return;
+
+      FileWriter writer = new FileWriter(file);
+
+      // Header
+      writer.write("Campaign:," + campaignName + "\n\n");
+
+      // Determine all metrics and all unique dates
+      Set<String> allDates = new TreeSet<>();
+      List<String> metricNames = new ArrayList<>(fullMetrics.keySet());
+
+      for (Map<String, Integer> metricData : fullMetrics.values()) {
+        allDates.addAll(metricData.keySet());
+      }
+
+      // Write column headers
+      writer.write("Date");
+      for (String metric : metricNames) {
+        writer.write("," + metric);
+      }
+      writer.write("\n");
+
+      // Write rows per date
+      for (String date : allDates) {
+        writer.write(date);
+        for (String metric : metricNames) {
+          Map<String, Integer> values = fullMetrics.get(metric);
+          Integer val = values.getOrDefault(date, 0);
+          writer.write("," + val);
+        }
+        writer.write("\n");
+      }
+
+      writer.close();
+      System.out.println(" CSV export completed: " + file.getAbsolutePath());
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public Map<String, Map<String, Integer>> getAllMetricsOverTime(FiltersBox filters) {
+    return dataController.getAllMetricsOverTime(filters); // full data for CSV
+  }
 
 
+  public Map<String, Integer> getClickByTimeData(FiltersBox filters) {
+    return dataController.getClicksOverTime(filters);
+  }
+  public List<Double> getClickCostData(FiltersBox filters) {
+    return dataController.getCostsList(filters);
+  }
 
 }
