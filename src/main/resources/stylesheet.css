@@ -1,0 +1,49 @@
+.root {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #333;
+}
+
+.metric-label {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-font-weight: 999;
+}
+
+.title-label {
+    -fx-font-family: "Arial Black", sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: 200;
+    -fx-text-fill: #222;
+}
+
+.add-campaign-label {
+    -fx-font-family: "Arial Black", sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: 200;
+    -fx-text-fill: #d9534f;
+}
+.combo-box {
+    -fx-text-inner-color: white;
+    -fx-prompt-text-fill: white;
+}
+
+.combo-box .cell {
+    -fx-background-color: #555;
+    -fx-text-fill: white;
+}
+
+.button {
+    -fx-background-color: #555;
+    -fx-text-fill: white;
+}
+
+.toggle-button {
+    -fx-background-color: #555;
+    -fx-text-fill: white;
+}
+
+.toggle-button:selected {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: black;
+}
+
