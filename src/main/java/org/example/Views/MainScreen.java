@@ -4,6 +4,7 @@ import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Font;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.awt.Color;
@@ -30,6 +31,7 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.Paragraph;
@@ -465,7 +467,7 @@ public class MainScreen {
     return returnBox;
   }
 
-  private Campaign getSelectedCampaign() {
+  public Campaign getSelectedCampaign() {
     if (campaignMenuButton != null && controller.getCampaigns().size() > 0) {
       for (Campaign campaign : controller.getCampaigns()) {
         if (campaign.getName().equals(campaignMenuButton.getText())) {
