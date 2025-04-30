@@ -48,12 +48,14 @@ public class LoginPage {
         usernameLabel.setFont(new Font(26));
         TextField usernameField = new TextField();
         usernameField.setMaxWidth(Double.MAX_VALUE);
+        usernameField.setFont(new Font(26));
 
         // Password
         Label passwordLabel = new Label("Password");
         passwordLabel.setFont(new Font(26));
         PasswordField passwordField = new PasswordField();
         passwordField.setMaxWidth(Double.MAX_VALUE);
+        passwordField.setFont(new Font(26));
 
         // Buttons
         HBox buttonBox = new HBox(20);

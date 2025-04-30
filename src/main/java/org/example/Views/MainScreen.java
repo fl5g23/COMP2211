@@ -4,7 +4,6 @@ import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Font;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.awt.Color;
@@ -27,10 +26,10 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
+import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.Paragraph;
@@ -89,6 +88,8 @@ public class MainScreen {
   Label cpcValue = new Label("");
   Label cpmValue = new Label("");
   Label totalCostValue = new Label("");
+
+
   Button toggleChartBtn = new Button("Switch to Histogram");
   FiltersBox filtersPanel;
   private Map<String, String> currentFilterSummary;
@@ -104,7 +105,29 @@ public class MainScreen {
   public MainScreen(Stage stage, UIController controller) {
     this.primaryStage = stage;
     this.controller = controller;
-    keyMetricsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bolder; -fx-underline: true;");
+    keyMetricsTitle.getStyleClass().add("title-label");
+    impressionsLabel.getStyleClass().add("metric-label");
+    clicksLabel.getStyleClass().add("metric-label");
+    uniquesLabel.getStyleClass().add("metric-label");
+    conversionsLabel.getStyleClass().add("metric-label");
+    bounceRateLabel.getStyleClass().add("metric-label");
+    ctrLabel.getStyleClass().add("metric-label");
+    cpaLabel.getStyleClass().add("metric-label");
+    cpcLabel.getStyleClass().add("metric-label");
+    cpmLabel.getStyleClass().add("metric-label");
+    totalCostLabel.getStyleClass().add("metric-label");
+    keyMetricsValue.setStyle("-fx-font-size: 20px;");
+    impressionsValue.setStyle("-fx-font-size: 14px;");
+    clicksValue.setStyle("-fx-font-size: 14px;");
+    uniquesValue.setStyle("-fx-font-size: 14px;");
+    conversionsValue.setStyle("-fx-font-size: 14px;");
+    bounceRateValue.setStyle("-fx-font-size: 14px;");
+    ctrValue.setStyle("-fx-font-size: 14px;");
+    cpaValue.setStyle("-fx-font-size: 14px;");
+    cpcValue.setStyle("-fx-font-size: 14px;");
+    cpmValue.setStyle("-fx-font-size: 14px;");
+    totalCostValue.setStyle("-fx-font-size: 14px;");
+
   }
 
   /**
@@ -115,11 +138,11 @@ public class MainScreen {
 
     // Top bar with title and Add Campaign button
     HBox topBar = new HBox();
-    topBar.setStyle("-fx-background-color: #ddd; -fx-padding: 10px;");
+    topBar.setStyle("-fx-background-color: #E0E0E0FF; -fx-padding: 10px;");
 
     // Initially set a Label (will be replaced by MenuButton)
-    Label title = new Label("Add Campaign");
-    title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #328ccd;");
+    Label title = new Label("+ Add Campaign");
+    title.getStyleClass().add("add-campaign-label");
     title.setOnMouseClicked(e -> controller.openAddCampaignDialog(title, topBar)); // Use controller
 
     Button logoutButton = new Button("Logout");
@@ -183,6 +206,7 @@ public class MainScreen {
 
     Button exportButton = new Button();
     exportButton.setText("Export Graph");
+    exportButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
 
     exportButton.setOnAction(
         e -> {
@@ -199,6 +223,7 @@ public class MainScreen {
         });
 
     Button compareGraphButton = new Button("Compare Graphs");
+    compareGraphButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
     compareGraphButton.setOnAction(
         e -> {
           Campaign selectedCampaign = getSelectedCampaign();
@@ -213,19 +238,20 @@ public class MainScreen {
         });
 
     Button authoriseUsersButton = new Button("Authorise Users");
+    authoriseUsersButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
     authoriseUsersButton.setOnAction(e -> controller.openAuthoriseUsersPage());
 
     topBar
         .getChildren()
         .addAll(
             title,
-            logoutButton,
+            compareGraphButton,
             toggleChartBtn,
+            toggleHistogramTypeBtn,
             exportSelectBox,
             exportButton,
-            compareGraphButton,
-            toggleHistogramTypeBtn,
-            authoriseUsersButton);
+            authoriseUsersButton,
+            logoutButton);
     topBar.setSpacing(20);
 
     if (role.equals("Admin")) {
@@ -243,11 +269,13 @@ public class MainScreen {
     metricsPanel.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 10px");
     VBox metricsLabels = new VBox();
     VBox metricsValues = new VBox();
+    VBox leftSpacer = new VBox();
+    leftSpacer.setMinWidth(10);
     VBox.setVgrow(metricsLabels, Priority.ALWAYS);
     metricsLabels.setAlignment(Pos.CENTER_LEFT);
     metricsValues.setAlignment(Pos.CENTER_RIGHT);
     metricsLabels.setFillWidth(true);
-    metricsPanel.getChildren().addAll(metricsLabels, metricsValues);
+    metricsPanel.getChildren().addAll(leftSpacer,metricsLabels, metricsValues);
 
     metricsLabels
         .getChildren()
@@ -295,6 +323,7 @@ public class MainScreen {
 
     lineChart = new LineChart<>(xAxis, yAxis);
     lineChart.setTitle("Campaign Performance Over Time");
+    lineChart.setStyle("-fx-font-size: 16px;");
     lineChart.setAnimated(false);
 
     // Histogram panel setup
@@ -322,6 +351,7 @@ public class MainScreen {
     setupCloseHandler(primaryStage);
 
     Scene scene = new Scene(root, 1100, 600);
+    scene.getStylesheets().add(getClass().getResource("/stylesheet.css").toExternalForm());
     primaryStage.setScene(scene);
     primaryStage.show();
   }
@@ -418,7 +448,7 @@ public class MainScreen {
     ObservableList<Node> originalChildren =
         FXCollections.observableArrayList(filtersPanel.getChildren());
 
-    // Create your returnBox
+    // Create returnBox
     VBox returnBox = new VBox();
     returnBox.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
     returnBox.setPrefSize(132, 500);
