@@ -1,14 +1,19 @@
 package org.example.Views;
 
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import javafx.util.Pair;
 import org.example.Controllers.UIController;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class LoginPage {
     private final Stage primaryStage;
@@ -21,61 +26,54 @@ public class LoginPage {
     }
 
     public void show(Stage primaryStage) {
-        AnchorPane root = new AnchorPane();
-        root.setPrefSize(414, 322); // Match FXML dimensions
+        // Create a VBox to hold the form elements
+        VBox vbox = new VBox(10); // spacing between elements
+        vbox.setPrefWidth(300);   // consistent width
+        vbox.setStyle("-fx-padding: 30;");
 
-        double leftMargin = 33;
-        double textFieldWidth = 414 - (2 * leftMargin);
-        double labelYOffset = 20;
-        double fieldHeight = 26;
+        vbox.setAlignment(Pos.CENTER); // center elements horizontally
 
-        // Title Label
-        Label titleLabel = new Label("Ad Campaign Dashboard");
-        titleLabel.setFont(new Font(21));
-        titleLabel.setLayoutX(95);
-        titleLabel.setLayoutY(30);
+        //profile icon
+        Image profileIcon = new Image(getClass().getResourceAsStream("/profile-icon.png"));
+        ImageView profileImageView = new ImageView(profileIcon);
+        profileImageView.setFitWidth(64);
+        profileImageView.setFitHeight(64);
 
-        // Username Label
+        // Title
+        Label titleLabel = new Label("Log in");
+        titleLabel.setFont(Font.font("System", FontWeight.BLACK, 50));
+
+        // Username
         Label usernameLabel = new Label("Username");
-        usernameLabel.setLayoutX(leftMargin);
-        usernameLabel.setLayoutY(80);
-
-        // Username Field
+        usernameLabel.setFont(new Font(26));
         TextField usernameField = new TextField();
-        usernameField.setLayoutX(leftMargin);
-        usernameField.setLayoutY(usernameLabel.getLayoutY() + labelYOffset);
-        usernameField.setPrefSize(textFieldWidth, fieldHeight);
+        usernameField.setMaxWidth(Double.MAX_VALUE);
 
-        // Password Label
+        // Password
         Label passwordLabel = new Label("Password");
-        passwordLabel.setLayoutX(leftMargin);
-        passwordLabel.setLayoutY(usernameField.getLayoutY() + 50);
-
-        // Password Field
+        passwordLabel.setFont(new Font(26));
         PasswordField passwordField = new PasswordField();
-        passwordField.setLayoutX(leftMargin);
-        passwordField.setLayoutY(passwordLabel.getLayoutY() + labelYOffset);
-        passwordField.setPrefSize(textFieldWidth, fieldHeight);
+        passwordField.setMaxWidth(Double.MAX_VALUE);
 
-        // Register Button
+        // Buttons
+        HBox buttonBox = new HBox(20);
+        buttonBox.setAlignment(Pos.CENTER);
         Button registerButton = new Button("Register");
-        registerButton.setPrefSize(100, 30);
-        registerButton.setLayoutX(95);
-        registerButton.setLayoutY(passwordField.getLayoutY() + 60);
-        registerButton.setOnAction(
-                e -> {
-                    if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
-                        controller.showAlert(null, "userpwdempty");
-                    } else {
-                        addUser(usernameField.getText(), passwordField.getText());
-                    }
-                });
-
-        // Login Button
         Button loginButton = new Button("Login");
-        loginButton.setPrefSize(100, 30);
-        loginButton.setLayoutX(220);
-        loginButton.setLayoutY(passwordField.getLayoutY() + 60);
+        registerButton.setPrefSize(160, 60);
+        loginButton.setPrefSize(160, 60);
+        registerButton.setFont(Font.font("System", 20));
+        loginButton.setFont(Font.font("System", 20));
+
+
+        registerButton.setOnAction(e -> {
+            if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
+                controller.showAlert(null, "userpwdempty");
+            } else {
+                addUser(usernameField.getText(), passwordField.getText());
+            }
+        });
+
         loginButton.setOnAction(e -> {
             if (usernameField.getText().trim().isEmpty() || passwordField.getText().trim().isEmpty()) {
                 controller.showAlert(null, "userpwdempty");
@@ -85,12 +83,24 @@ public class LoginPage {
             }
         });
 
-        // Add all nodes
-        root.getChildren().addAll(titleLabel, usernameLabel, usernameField, passwordLabel, passwordField, registerButton, loginButton);
+        buttonBox.getChildren().addAll(registerButton, loginButton);
+
+        // Add elements to VBox
+        vbox.getChildren().addAll(
+            profileImageView,
+            usernameLabel, usernameField,
+            passwordLabel, passwordField,
+            buttonBox
+        );
+
+        // Center the VBox using StackPane
+        StackPane root = new StackPane(vbox);
+        root.setPrefSize(414, 322);
 
         // Set up scene and stage
+        Scene scene = new Scene(root);
         primaryStage.setTitle("Login");
-        primaryStage.setScene(new Scene(root));
+        primaryStage.setScene(scene);
         primaryStage.show();
     }
 
