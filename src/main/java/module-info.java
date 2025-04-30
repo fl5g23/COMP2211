@@ -5,6 +5,7 @@ module COMP2211 {
     requires transitive javafx.graphics;
     requires transitive javafx.swing;
     requires transitive org.jfree.jfreechart;
+    requires itextpdf;
     exports org.example;
     exports org.example.Models;
     exports org.example.Views;

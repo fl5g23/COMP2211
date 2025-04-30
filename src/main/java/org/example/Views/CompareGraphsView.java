@@ -55,6 +55,8 @@ public class CompareGraphsView{
     graph2Filters = new FiltersBox("Choose Filters for Graph 2:", campaignName, startDate, endDate, 300, 500);
     graph1Filters.setMetric(metric);
     graph2Filters.setMetric(metric);
+    graph1Filters.setInitialFiltersforComparing();
+    graph2Filters.setInitialFiltersforComparing();
 
     Button compareButton = new Button("Compare");
     compareButton.setOnAction(e -> {

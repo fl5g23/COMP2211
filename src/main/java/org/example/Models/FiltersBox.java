@@ -181,6 +181,11 @@ public class FiltersBox extends VBox {
         gender = "All";
     }
 
+    public void setInitialFiltersforComparing(){
+        pageleftBounceToggle.setSelected(true);
+        dayToggle.setSelected(true);
+    }
+
   public String getCampaignName() {
         return campaignName;
     }
