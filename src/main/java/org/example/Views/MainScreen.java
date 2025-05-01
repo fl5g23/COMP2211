@@ -5,6 +5,9 @@ import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Font;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.awt.Color;
@@ -223,6 +226,8 @@ public class MainScreen {
             showAlert(null, "exportingbeforecampaignloaded");
           }
         });
+    Button helpButton = new Button("Help");
+    helpButton.setOnAction(e -> downloadUserManual());
 
     Button compareGraphButton = new Button("Compare Graphs");
     compareGraphButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
@@ -253,6 +258,7 @@ public class MainScreen {
             exportSelectBox,
             exportButton,
             authoriseUsersButton,
+            helpButton,
             logoutButton);
     topBar.setSpacing(20);
 
@@ -964,6 +970,29 @@ public class MainScreen {
 
     } catch (Exception e) {
       e.printStackTrace();
+    }
+  }
+  private void downloadUserManual() {
+    FileChooser fileChooser = new FileChooser();
+    fileChooser.setTitle("Save User Manual");
+    fileChooser.setInitialFileName("UserManual.pdf");
+    fileChooser.getExtensionFilters().add(
+        new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+    );
+
+    File destFile = fileChooser.showSaveDialog(null); // or pass your main Stage here
+
+    if (destFile != null) {
+      try (InputStream in = getClass().getResourceAsStream("/UserManual.pdf")) {
+        if (in == null) {
+          System.err.println("Manual not found in resources.");
+          return;
+        }
+        Files.copy(in, destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("Manual downloaded successfully.");
+      } catch (IOException ex) {
+        ex.printStackTrace();
+      }
     }
   }
 
