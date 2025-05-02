@@ -127,7 +127,19 @@ public class importFilestoDatabase {
         }
     }
 
-  public void insertDataUserProfiles(String campaignName, List<List<String>> data) {
+
+    /**
+     * Inserts unique user demographic data into the UserProfiles table.
+     * Processes impression log data to create unique user profiles, avoiding duplicates
+     * by tracking user IDs. Uses batch processing for improved performance.
+     *
+     * @param campaignName The name of the campaign associated with the user profiles
+     * @param data A List of Lists containing the impression log data, where each inner list
+     *            represents one record with the following format:
+     *            [date, user_id, gender, age, income, context]
+     * @throws RuntimeException If there's an error while inserting data into the UserProfiles table
+     */
+    public void insertDataUserProfiles(String campaignName, List<List<String>> data) {
     final String url = "jdbc:sqlite:mainData.db";
     final String sql =
         "INSERT OR IGNORE INTO UserProfiles (Campaign, ID, Gender, Age, Income, Context) VALUES (?, ?, ?, ?, ?, ?)";

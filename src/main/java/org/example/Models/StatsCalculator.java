@@ -6,6 +6,11 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.sql.*;
 
+
+/**
+ * Calculates and manages various advertising campaign statistics from database data.
+ * Handles metrics calculations, data filtering, and time-based analysis.
+ */
 public class StatsCalculator {
   String impressionsFilterSQL = "";
   String clicksFilterSQL = "";
@@ -13,11 +18,23 @@ public class StatsCalculator {
 
   importFilestoDatabase importer = new importFilestoDatabase();
 
+  /**
+   * Initializes the database tables required for statistics calculations.
+   */
   public void setup(){
     importer.createDataTables();
   }
 
 
+  /**
+   * Adds campaign data from log files to the database.
+   * Creates user profiles and imports impression, click, and server logs.
+   *
+   * @param campaign The campaign object containing metadata
+   * @param impression_log File containing impression data
+   * @param click_log File containing click data
+   * @param server_log File containing server interaction data
+   */
   public void addData(Campaign campaign, File impression_log, File click_log, File server_log){
     var impressionData = importer.getCSVData(impression_log.getAbsolutePath());
     var clickData = importer.getCSVData(click_log.getAbsolutePath());
@@ -28,6 +45,11 @@ public class StatsCalculator {
     importer.insertDataUserProfiles(campaign.getName(), impressionData);
   }
 
+  /**
+   * Prepares SQL filter conditions for subsequent queries.
+   *
+   * @param sqlStatements List containing filter conditions for impressions, clicks, and server data
+   */
   public void primeForQueries(ArrayList<String> sqlStatements){
     impressionsFilterSQL = sqlStatements.getFirst();
     clicksFilterSQL = sqlStatements.get(1);
@@ -358,8 +380,11 @@ public class StatsCalculator {
 
 
   /**
-   * Executes SQL Statements on the database
-   * ResultSet - set of results of sql statement
+   * Executes a parameterized SQL query on the database.
+   *
+   * @param sqlstmt SQL statement to execute
+   * @param parameters List of parameter values to bind to the statement
+   * @return ResultSet containing query results
    */
   public ResultSet executeSQL(String sqlstmt, List<String> parameters) {
     try {
@@ -398,7 +423,15 @@ public class StatsCalculator {
 
     return false; // Default to false if something goes wrong
   }
-  //daily
+
+
+  /**
+   * Retrieves metrics data over time with specified granularity.
+   * Supports hourly, daily, and weekly time periods.
+   *
+   * @param filterSettings Configuration object containing filter criteria and display preferences
+   * @return Map of metric names to their time-based values
+   */
   public Map<String, Map<String, Integer>> getMetricsOverTime(FiltersBox filterSettings) {
 
     Map<String, Map<String, Integer>> metrics = new TreeMap<>();
@@ -501,6 +534,14 @@ public class StatsCalculator {
     return metrics;
   }
 
+
+  /**
+   * Gets metrics aggregated by week.
+   * Handles special case of weekly data aggregation with proper week boundaries.
+   *
+   * @param filterSettings Configuration object containing filter criteria
+   * @return Map of metric names to their weekly values
+   */
   // Keep this method separate for weekly metrics since it requires more complex date calculations
   public Map<String, Map<String, Integer>> getMetricsWeekly(FiltersBox filterSettings) {
 
@@ -610,6 +651,12 @@ public class StatsCalculator {
     return weeklyMetrics;
   }
 
+  /**
+   * Gets the start date of a campaign.
+   *
+   * @param campaignName Name of the campaign
+   * @return The start date and time of the campaign's first impression
+   */
   public LocalDateTime getCampaignStartDate(String campaignName) {
     String sql = "SELECT MIN(Date) FROM Impressions WHERE Campaign = ?";
     LocalDateTime endDate = null;
@@ -624,6 +671,13 @@ public class StatsCalculator {
     return endDate;
   }
 
+
+  /**
+   * Gets the end date of a campaign.
+   *
+   * @param campaignName Name of the campaign
+   * @return The end date and time of the campaign's last impression
+   */
   public LocalDateTime getCampaignEndDate(String campaignName) {
     String sql = "SELECT MAX(Date) FROM Impressions WHERE Campaign = ?";
     LocalDateTime endDate = null;
@@ -725,7 +779,12 @@ public class StatsCalculator {
       e.printStackTrace();
     }
     return clicksOverTime;
-  }  public void closeAppActions() {
+  }
+  /**
+   * Cleans up database resources when closing the application.
+   * Drops all temporary tables.
+   */
+  public void closeAppActions() {
     String url = "jdbc:sqlite:mainData.db";
 
     try (var conn = DriverManager.getConnection(url);

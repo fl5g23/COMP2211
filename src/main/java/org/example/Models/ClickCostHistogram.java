@@ -14,6 +14,9 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Creates and manages histograms for visualizing click costs and click frequency over time.
+ */
 public class ClickCostHistogram {
 
   private List<Double> clickCosts;
@@ -37,10 +40,18 @@ public class ClickCostHistogram {
     this.chart = createHistogram();
   }
 
+  /**
+   * Gets the current chart instance.
+   * @return The JFreeChart instance representing the histogram
+   */
   public JFreeChart getChart() {
     return chart;
   }
   //Create Histogram Based on Selected Type
+  /**
+   * Creates appropriate histogram based on data type.
+   * @return JFreeChart instance of either click cost or clicks over time histogram
+   */
   public JFreeChart createHistogram() {
     if (isClickByCost) {
       return createClickCostHistogram();
@@ -103,6 +114,10 @@ public class ClickCostHistogram {
   }
 
   // Blank Histogram (For Initial Display)
+  /**
+   * Creates a blank histogram for initial display.
+   * @return Empty JFreeChart histogram
+   */
   public JFreeChart createBlankHistogram() {
     HistogramDataset dataset = new HistogramDataset();
 

@@ -15,16 +15,33 @@ import org.example.Controllers.UIController;
 import java.util.ArrayList;
 import java.util.Objects;
 
+/**
+ * Represents the login page of the application.
+ * Handles user authentication and registration interface.
+ */
 public class LoginPage {
     private final Stage primaryStage;
     private UIController controller;  // Reference to the controller
 
+    /**
+     * Constructs a new LoginPage with the specified primary stage.
+     * Initializes the UI controller and performs initial setup.
+     *
+     * @param stage The primary stage for the login window
+     */
     public LoginPage(Stage stage) {
         this.primaryStage = stage;
         this.controller = new UIController(primaryStage);
         controller.setup();
     }
 
+    /**
+     * Displays the login page interface.
+     * Creates and configures the login form with username and password fields,
+     * login and register buttons, and profile icon.
+     *
+     * @param primaryStage The primary stage where the login page will be displayed
+     */
     public void show(Stage primaryStage) {
         // Create a VBox to hold the form elements
         VBox vbox = new VBox(10); // spacing between elements
@@ -106,6 +123,13 @@ public class LoginPage {
         primaryStage.show();
     }
 
+    /**
+     * Handles user registration process.
+     * Validates if username already exists and adds new user if validation passes.
+     *
+     * @param username The username to register
+     * @param password The password for the new account
+     */
     private void addUser(String username, String password){
         ArrayList<Object> authorisedResult = controller.userExists(username, password);
         Boolean usernameValid = (Boolean) authorisedResult.get(0);
@@ -116,6 +140,15 @@ public class LoginPage {
         }
     }
 
+    /**
+     * Handles user login authentication.
+     * Validates username, password, and authorization status.
+     * Shows appropriate error messages for invalid credentials or unauthorized access.
+     * Redirects to main screen upon successful authentication.
+     *
+     * @param username The username to authenticate
+     * @param password The password to verify
+     */
     private void loginUser(String username, String password) {
         ArrayList<Object> authorisedResult = controller.userExists(username, password);
         Boolean usernameValid = (Boolean) authorisedResult.get(0);
@@ -137,7 +170,12 @@ public class LoginPage {
         }
     }
 
-
+    /**
+     * Sets the UI controller for the login page.
+     * Used for testing purposes or dependency injection.
+     *
+     * @param controller The UIController instance to be used
+     */
     // Method to set the controller (needed for testing or dependency injection)
     public void setController(UIController controller) {
         this.controller = controller;

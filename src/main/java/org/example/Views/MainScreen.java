@@ -136,7 +136,9 @@ public class MainScreen {
   }
 
   /**
-   * Initialize and show the main screen
+   * Initializes and displays the main application screen.
+   * Sets up the UI layout including top bar, metrics panel, charts and filters.
+   * @param role The user role ("Admin" or other) that determines available functionality
    */
   public void show(String role) {
     primaryStage.setTitle("Ad Campaign Dashboard");
@@ -358,14 +360,15 @@ public class MainScreen {
 
     setupCloseHandler(primaryStage);
 
-    Scene scene = new Scene(root, 1100, 600);
+    Scene scene = new Scene(root, 1200, 700);
     scene.getStylesheets().add(getClass().getResource("/stylesheet.css").toExternalForm());
     primaryStage.setScene(scene);
     primaryStage.show();
   }
 
   /**
-   * Set up tooltips for the metrics labels
+   * Sets up informational tooltips for all metric labels in the UI.
+   * Provides descriptions for metrics like impressions, clicks, conversions etc.
    */
   private void setupTooltips() {
     Tooltip impressionsTooltip = new Tooltip("Total number of times the ad was displayed.");
@@ -401,7 +404,8 @@ public class MainScreen {
   }
 
   /**
-   * Create the filters panel
+   * Creates and configures the filters panel component.
+   * @return VBox containing the configured filters panel
    */
   private VBox createFiltersPanel() {
     filtersPanel = new FiltersBox(null, null, null, null, 132, 500);
@@ -473,6 +477,10 @@ public class MainScreen {
     return returnBox;
   }
 
+  /**
+   * Retrieves the currently selected campaign.
+   * @return The selected Campaign object, or null if none is selected
+   */
   public Campaign getSelectedCampaign() {
     if (campaignMenuButton != null && controller.getCampaigns().size() > 0) {
       for (Campaign campaign : controller.getCampaigns()) {
@@ -486,7 +494,7 @@ public class MainScreen {
   }
 
   /**
-   * Configure the chart toggle button behavior
+   * Sets up the chart toggle button behavior for switching between line chart and histogram views.
    */
   private void setupChartToggleButton() {
     toggleChartBtn.setOnAction(
@@ -525,7 +533,9 @@ public class MainScreen {
   }
 
   /**
-   * Show alert dialog for various error cases
+   * Displays an error alert dialog with customized messages.
+   * @param file The file related to the error (can be null)
+   * @param type The type of error to display
    */
   public static void showAlert(File file, String type) {
     Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -585,7 +595,9 @@ public class MainScreen {
   }
 
   /**
-   * Update the campaign menu with available campaigns
+   * Updates the campaign selection menu with available campaigns.
+   * @param titleLabel The label to be replaced with the menu button
+   * @param topBar The container HBox for the top bar elements
    */
   public void updateCampaignMenu(Label titleLabel, HBox topBar) {
     if (campaignMenuButton == null) {
@@ -622,7 +634,14 @@ public class MainScreen {
   }
 
   /**
-   * Update metrics display with new values
+   * Updates the metrics display with new values.
+   * @param coreMetrics Map containing the core metric values
+   * @param bounceRate The current bounce rate
+   * @param ctr Click-through rate
+   * @param cpa Cost per acquisition
+   * @param cpc Cost per click
+   * @param cpm Cost per thousand impressions
+   * @param totalCost Total campaign cost
    */
   public void updateMetricsDisplay(
       Map<String, Double> coreMetrics,
@@ -652,7 +671,10 @@ public class MainScreen {
   }
 
   /**
-   * Update the performance graph with new data
+   * Updates the performance graph with new time series data.
+   * @param metricsOverTime Map of metrics data over time
+   * @param selectedMetric The currently selected metric to display
+   * @param granularity The time granularity for the data
    */
   public void updatePerformanceGraph(
       Map<String, Map<String, Integer>> metricsOverTime,
@@ -857,6 +879,17 @@ public class MainScreen {
     ChartUtils.saveChartAsPNG(tempFile, chart, 800, 600);
     return tempFile;
   }
+
+
+  /**
+   * Exports the dashboard as a PDF document.
+   * @param chart The line chart to export
+   * @param costHistogram The cost histogram to export
+   * @param timeHistogram The time histogram to export
+   * @param filters Current filter settings
+   * @param metrics Current metric values
+   * @param campaignName Name of the campaign being exported
+   */
   public void exportDashboardAsPDF(
       LineChart<String, Number> chart,
       JFreeChart costHistogram,

@@ -22,6 +22,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Displays the results of graph comparison with two charts side by side.
+ */
 public class CompareGraphsResultView {
     private Stage primaryStage;
     private UIController controller;
@@ -31,7 +34,16 @@ public class CompareGraphsResultView {
     private LineChart<String, Number> lineChartRight;
 
 
-    public CompareGraphsResultView(Stage primaryStage, UIController uiController, FiltersBox rightGraphFilters, FiltersBox leftGraphFilters) {
+    /**
+     * Constructs a new CompareGraphsResultView.
+     *
+     * @param primaryStage The main application window
+     * @param uiController The UIController for handling business logic
+     * @param rightGraphFilters Filters configuration for the right graph
+     * @param leftGraphFilters Filters configuration for the left graph
+     */
+    public CompareGraphsResultView(Stage primaryStage, UIController uiController,
+                                 FiltersBox rightGraphFilters, FiltersBox leftGraphFilters) {
         this.primaryStage = primaryStage;
         this.controller = uiController;
 
@@ -40,6 +52,10 @@ public class CompareGraphsResultView {
 
     }
 
+    /**
+     * Displays the comparison results in a new window.
+     * Shows two line charts side by side with the filtered data.
+     */
     public void show() {
         Stage compareResultStage = new Stage();
         compareResultStage.setTitle("Comparison Result");
@@ -70,6 +86,12 @@ public class CompareGraphsResultView {
         compareResultStage.show();
     }
 
+    /**
+     * Creates a configured line chart for displaying metrics.
+     *
+     * @param title The title for the chart
+     * @return A configured LineChart instance
+     */
     private LineChart<String, Number> createLineChart(String title) {
         CategoryAxis xAxis = new CategoryAxis();
         xAxis.setLabel("Date");
@@ -83,8 +105,13 @@ public class CompareGraphsResultView {
         return chart;
     }
 
-    private void generateGraphForChart(LineChart<String, Number> chart,
-                                       FiltersBox filtersBox) {
+    /**
+     * Generates and populates a chart with data based on the provided filters.
+     *
+     * @param chart The LineChart to populate with data
+     * @param filtersBox The filters to apply when generating the graph
+     */
+    private void generateGraphForChart(LineChart<String, Number> chart, FiltersBox filtersBox) {
         // Use existing generateGraph() method from UIController
 
         String selectedMetric = filtersBox.getMetric();

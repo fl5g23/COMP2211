@@ -14,6 +14,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Provides an interface for comparing different metrics between two time periods
+ * or filter configurations.
+ */
 public class CompareGraphsView{
     private Stage primaryStage;
     private UIController uiController;
@@ -25,7 +29,17 @@ public class CompareGraphsView{
     FiltersBox graph2Filters;
 
 
-    public CompareGraphsView(Stage primaryStage, UIController uiController, LocalDate startDate, LocalDate endDate, Campaign campaign){
+    /**
+     * Constructs a new CompareGraphsView.
+     *
+     * @param primaryStage The main application window
+     * @param uiController The UIController for handling business logic
+     * @param startDate The initial start date for comparison
+     * @param endDate The initial end date for comparison
+     * @param campaign The campaign whose data is being compared
+     */
+    public CompareGraphsView(Stage primaryStage, UIController uiController, 
+                           LocalDate startDate, LocalDate endDate, Campaign campaign){
         this.primaryStage = primaryStage;
         this.uiController = uiController;
         this.startDate = startDate;
@@ -33,6 +47,10 @@ public class CompareGraphsView{
         this.campaign = campaign;
     }
 
+    /**
+     * Displays the graph comparison interface.
+     * Allows selection of metrics and filter configurations for two graphs.
+     */
     public void show(){
     Stage stage = new Stage();
     stage.setTitle("Compare Graphs");

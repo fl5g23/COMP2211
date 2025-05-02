@@ -11,6 +11,10 @@ import org.example.Controllers.UIController;
 
 import java.io.File;
 
+/**
+ * Represents the view for adding a new advertising campaign.
+ * Provides interface for entering campaign details and uploading log files.
+ */
 public class AddCampaignView {
 
     private File impressionLogFile;
@@ -23,7 +27,10 @@ public class AddCampaignView {
     private Boolean server_log_flag = false;
 
     /**
-     * Constructor that takes the primary stage and controller
+     * Constructs a new AddCampaignView instance.
+     * 
+     * @param primaryStage The main application window
+     * @param controller The UIController instance for handling business logic
      */
     public AddCampaignView(Stage primaryStage, UIController controller) {
         this.stage = primaryStage;
@@ -31,7 +38,12 @@ public class AddCampaignView {
     }
 
     /**
-     * Logic for opening new dialog when "Add Campaign" Label is pressed
+     * Opens a modal dialog for adding a new campaign.
+     * Provides fields for campaign name and buttons for uploading impression, click, and server logs.
+     * Validates file formats and campaign name before saving.
+     *
+     * @param titleLabel The label to be updated after campaign creation
+     * @param rootContainer The container that holds the campaign interface elements
      */
     public void openAddCampaignDialog(Label titleLabel, HBox rootContainer) {
         Stage dialogStage = new Stage();
@@ -147,8 +159,10 @@ public class AddCampaignView {
     }
 
     /**
-     * File finder interface
-     * @return selected File or null if no file was selected
+     * Opens a file chooser dialog for selecting CSV files.
+     * Configured to only show and accept CSV format files.
+     *
+     * @return The selected File object, or null if no file was selected
      */
     public File openFileFinder() {
         FileChooser fileChooser = new FileChooser();
@@ -157,7 +171,8 @@ public class AddCampaignView {
     }
 
     /**
-     * Resets the form fields and flags
+     * Resets all form fields and validation flags to their initial state.
+     * Clears all selected files and their corresponding flags.
      */
     public void resetForm() {
         impressionLogFile = null;

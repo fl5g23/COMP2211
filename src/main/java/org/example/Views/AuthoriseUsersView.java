@@ -16,12 +16,22 @@ import org.example.Controllers.UIController;
 
 import java.util.ArrayList;
 
+/**
+ * Provides an interface for administrators to manage user authorizations.
+ * Allows accepting or rejecting new users and assigning admin privileges.
+ */
 public class AuthoriseUsersView {
 
     private Stage primaryStage;
     private UIController controller;
     private ArrayList<String> userList; // Instance variable to hold the list of unauthorised users
 
+    /**
+     * Constructs a new AuthoriseUsersView.
+     *
+     * @param primaryStage The main application window
+     * @param controller The UIController for handling business logic
+     */
     public AuthoriseUsersView(Stage primaryStage, UIController controller) {
         this.primaryStage = primaryStage;
         this.controller = controller;
@@ -29,6 +39,11 @@ public class AuthoriseUsersView {
     }
 
 
+    /**
+     * Displays the user authorization interface.
+     * Shows a list of unauthorized users and provides options to accept/reject users
+     * and assign admin privileges.
+     */
     public void show() {
         Stage dialogStage = new Stage();
         dialogStage.setTitle("Authorise Users");

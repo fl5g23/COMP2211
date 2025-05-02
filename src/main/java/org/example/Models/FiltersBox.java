@@ -11,6 +11,11 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+
+/**
+ * A custom VBox component that provides UI controls for filtering campaign data.
+ * Includes filters for demographics, time periods, and display options.
+ */
 public class FiltersBox extends VBox {
 
     private String gender;
@@ -27,7 +32,16 @@ public class FiltersBox extends VBox {
     private DatePicker endDatePicker;
 
 
-    // Constructor
+    /**
+     * Creates a new FiltersBox with specified dimensions and initial values.
+     *
+     * @param title The title for the filters section
+     * @param campaignName The name of the campaign being filtered
+     * @param startDate Initial start date for the date range
+     * @param endDate Initial end date for the date range
+     * @param prefHorizontalSize Preferred width of the component
+     * @param prefVerticalSize Preferred height of the component
+     */
     public FiltersBox(String title, String campaignName, LocalDate startDate, LocalDate endDate, Integer prefHorizontalSize, Integer prefVerticalSize) {
         this.setStyle("-fx-background-color: #e0e0e0; -fx-padding: 15px;");
         this.setPrefSize(prefHorizontalSize, prefVerticalSize);
@@ -162,6 +176,12 @@ public class FiltersBox extends VBox {
     }
 
 
+    /**
+     * Sets initial filter values for first-time campaign generation.
+     * @param start Start date for the campaign
+     * @param end End date for the campaign
+     * @param campaignName Name of the campaign
+     */
     public void selectFirstGenerationFilters(LocalDate start, LocalDate end, String campaignName){
         bounceValue = "PageLeft";
         metric = "Impressions";
@@ -174,6 +194,10 @@ public class FiltersBox extends VBox {
         endDatePicker.setValue(end);
     }
 
+
+    /**
+     * Initializes filters for graph comparison view.
+     */
     public void selectFirstGenerationFilters(){
         bounceValue = "PageLeft";
         metric = "Impressions";
